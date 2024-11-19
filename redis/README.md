@@ -9,6 +9,22 @@
 #### docker 安装
 redis.config
 ```
+# 60s 内有3个值变动，通过bgsave持久化
+save 60 3
+
+# bgsave 失败之后，是否停止持久化数据到磁盘，yes 表示停止持久化，no 表示忽略错误继续写文件。
+stop-writes-on-bgsave-error yes
+
+
+
+# RDB 文件压缩
+rdbcompression yes
+
+
+# rdb & aof 开启混合持久化
+aof-use-rdb-preamble yes
+
+
 requirepass 123456
 appendonly yes
 protected-mode no
@@ -23,6 +39,286 @@ docker run -d --name redis-1 \
   -p 6380:6379 \
   redis redis-server /usr/local/etc/redis/redis.conf
 ```
+
+#### 常见数据类型
+
+常用数据类型
+
+String（字符串），Hash（哈希），List（列表），Set（集合）、Zset（有序集合）
+
+新增数据类型
+
+HyperLogLog（2.8 版新增）、GEO（3.2 版新增）、Stream（5.0 版新增）
+
+##### 常用数据类型
+
+1. String
+
+   String 是最基本的 key-value 结构，key 是唯一标识，value 是具体的值，value其实不仅是字符串，也可以是数字（整数或浮点数），value 最多可以容纳的数据长度是 512MB
+   
+   基本用法
+
+   ```shell
+   # 设置一个键值对，以及过期时间
+   set key value [NX|XX] [GET] [EX seconds|PX millise
+   # 获取 key 对用 value
+   get key
+   ```
+   
+   应用场景
+   
+   - 缓存对象
+
+      ```shell
+      SET user:1 '{"name":"xiaolin", "age":18}'
+      ```
+     
+   - 常规计数
+      ```shell
+      SET aritcle:readcount:1001 0
+      incr aritcle:readcount:1001
+      ```
+   - 分布式锁
+      ```shell
+      SET lock_key unique_value NX PX 10000
+      ```
+
+2. List
+
+   List(双向列表)列表是简单的字符串列表，按照插入顺序排序，可以从头部或尾部向 List 列表添加元素。
+
+   基本用法
+
+   ```shell
+   # 向列表的头/尾部插入 n 个元素
+   LPUSH/RPUSH key value...
+   # 获取 列表 头/尾元素
+   LPOP/RPOP key
+   # 返回列表key中指定区间内的元素，区间以偏移量start和stop指定，从0开始
+   LRANGE key start stop
+   # 从key列表表头弹出一个元素，没有就阻塞timeout秒，如果timeout=0则一直阻塞
+   BLPOP/BRPOP key timeout
+   ```
+
+   应用场景
+
+   - 消息队列，生产者使用`LPUSH/RPUSH`往列表中插入消息，消费者使用`BRPOP/BLPOP`消费列表中的数据，保证了有序性，也确保了消费者阻塞式读取数据；生产者使用全局唯一ID确保不会重复消息处理；使用`BRPOPLPUSH`确保消息可靠
+
+3. Hash
+
+   Hash是一个键值对(key-value)，`value=[{field1, value1},{field2, value2},{fieldN, valueN}]`，比较适合存储对象
+
+   基本用法
+
+   ```shell
+   # 存储一个哈希表的键值
+   hset stu1 name wx age 12
+   # 返回哈希表key中field的数量
+   hlen stu1
+   # 返回所有的键值
+   hgetall stu1
+   ```
+
+   应用场景
+
+   - 缓存对象，对于对象中某些频繁变化的属性可以用Hash类型来存储
+
+      ```shell
+      hset stu1 name wx age 12
+      ```
+
+4. Set
+
+   Set类型是一个无序并唯一的键值集合，它的存储顺序不会按照插入的先后顺序进行存储。
+
+   基本用法
+
+   ```shell
+   # 往集合key中存入元素，元素存在则忽略，若key不存在则新建
+   sadd key member [member ...]
+   # 从集合key中删除元素
+   srem key member [member ...]
+   # 获取所有元素
+   smembers key
+   # 获取集合中key中的数量
+   scard key
+   
+   # 判断 member元素是否存在集合key中
+   sismember key member
+   
+   # 从集合key中随机选出count个元素，元素不从key中删除
+   srandmember key [count]
+   
+   # 从集合key中随机选出count个元素，元素从集合中删除
+   spop key [count]
+   
+   ## 集合 交集、并集、差集运算 ....
+   ```
+
+   应用场景
+
+   - 文章点赞，key是文章id，value是用户id
+   
+   ```shell
+   ## 点赞
+   sadd article:1 uid:1
+   sadd article:1 uid:2
+   sadd article:1 uid:3
+   ## 取消点赞
+   srem article:1 uid:1
+   ## 查看所有点赞用户
+   smembers article:1
+   ```
+
+   - 抽奖活动，集合中存储用户名
+
+   ```shell
+   ## 集合存储用户名
+   sadd lockly user1 user2 user3 user4 user5 user6
+   ## 抽取一个一等奖
+   SRANDMEMBER lockly 1
+   # 抽取2个二等奖
+   SRANDMEMBER lockly 2
+   # 抽取三个三等奖
+   SRANDMEMBER lockly 3
+   ```
+
+5. Zset
+
+   Zset是有序集合，相比Set类型多了一个排序属性score（分数），对于有序集合ZSet来说，每个存储元素相当于两个值组成的，一个是有序集合的元素值，一个是排序值
+
+   基本用法
+
+   ```shell
+   # 往有序集合key中加⼊带分值元素
+   ZADD key score member [[score member]...]
+   # 往有序集合key中删除元素
+   ZREM key member [member...]
+   # 返回有序集合key中元素member的分值
+   ZSCORE key member
+   # 返回有序集合key中元素个数
+   ZCARD key
+   # 为有序集合key中元素member的分值加上increment
+   ZINCRBY key increment member
+   # 正序获取有序集合key从start下标到stop下标的元素
+   ZRANGE key start stop [WITHSCORES]
+   # 倒序获取有序集合key从start下标到stop下标的元素
+   ZREVRANGE key start stop [WITHSCORES]
+   # 返回有序集合中指定分数区间内的成员，分数由低到⾼排序。
+   ZRANGEBYSCORE key min max [WITHSCORES] [LIMIT offset count]
+   # 返回指定成员区间内的成员，按字典正序排列, 分数必须相同。
+   ZRANGEBYLEX key min max [LIMIT offset count]
+   # 返回指定成员区间内的成员，按字典倒序排列, 分数必须相同
+   ZREVRANGEBYLEX key max min [LIMIT offset count]
+   ```
+   
+   应用场景
+   
+   - 排行榜，文章浏览量排行榜
+   
+   ```shell
+   # 初始化数据
+   ZADD article:book 200 article:1 50 article:2 150 article:3 220 article:4 100 article:5
+   # article:3 增加浏览量
+   ZINCRBY article:book 1 article:3
+   # 获取浏览量前三的文章和浏览量
+   ZREVRANGE article:book 0 2 withscores
+   ```
+
+6. BitMap
+
+   BitMap，位图是⼀串连续的⼆进制数组（0和1），可以通过偏移量（offset）定位元素。BitMap通过最⼩的单位bit
+   来进⾏ 0|1 的设置，表示某个元素的值或者状态，时间复杂度为O(1)。
+
+   基本用法
+
+   ```shell
+   # 设置值，其中value只能是 0 和 1
+   SETBIT key offset value
+   # 获取值
+   GETBIT key offset
+   # 获取指定范围内值为 1 的个数
+   # start 和 end 以字节为单位
+   BITCOUNT key start end
+   
+   # BitMap间的运算
+   # operations 位移操作符，枚举值
+   AND 与运算 &
+   OR 或运算 |
+   XOR 异或 ^
+   NOT 取反 ~
+   # result 计算的结果，会存储在该key中
+   # key1 … keyn 参与运算的key，可以有多个，空格分割，not运算只能⼀个key
+   # 当 BITOP 处理不同⻓度的字符串时，较短的那个字符串所缺少的部分会被看作 0。返回值是保存到 destkey
+   BITOP [operations] [result] [key1] [keyn…]
+   # 返回指定key中第⼀次出现指定value(0/1)的位置
+   BITPOS [key] [value]
+   ```
+   
+   应用场景
+
+   - 签到统计，在签到打卡的场景中，我们只用记录签到(1)或未签到(0)
+
+   ```shell
+   # 用户 a 11月9日 签到
+   SETBIT uid:a:202411 8 1
+   # 检查该用户是否在 11月9日签到
+   GETBIT uid:a:202411 8
+   # 统计签到次数
+   BITCOUNT uid:a:202411
+   ```
+
+7. Geo
+
+   Geo 主要用于存储地理位置信息，并对存储的信息进行操作
+
+   基本用法
+
+   ```shell
+   # 存储指定的地理空间位置，可以将⼀个或多个经度(longitude)、纬度(latitude)、位置名称(member)添加
+   GEOADD key longitude latitude member [longitude latitude member ...]
+   # 从给定的 key ⾥返回所有指定名称(member)的位置（经度和纬度），不存在的返回 nil。
+   GEOPOS key member [member ...]
+   # 返回两个给定位置之间的距离。
+   GEODIST key member1 member2 [m|km|ft|mi]
+   # 根据⽤户给定的经纬度坐标来获取指定范围内的地理位置集合。
+   GEORADIUS key longitude latitude radius m|km|ft|mi [WITHCOORD] [WITHDIST] [WITHHASH
+   ```
+   
+   应用场景
+
+   - 滴滴叫车
+
+   ```shell
+   # 设置 司机(33)车辆位置
+   GEOADD cars:locations 116.034567 39.030452 33
+   # 用户的经纬度附近 5 公里你的车辆信息
+   GEORADIUS cars:locations 116.054579 39.030453 5 km ASC COUNT 10
+   ```
+
+8. Stream
+
+   Stream 实现了消息队列，支持消息的持久化、支持自动生成全局唯一ID、支持ack确认消息模式、支持消费组模式等
+
+   基本用法
+
+   ```
+   XADD - 添加消息到末尾
+   XTRIM - 对流进行修剪，限制长度
+   XDEL - 删除消息
+   XLEN - 获取流包含的元素数量，即消息长度
+   XRANGE - 获取消息列表，会自动过滤已经删除的消息
+   XREVRANGE - 反向获取消息列表，ID 从大到小
+   XREAD - 以阻塞或非阻塞方式获取消息列表
+   ```
+
+   应用场景
+
+   - 消息队列
+
+   ```
+   // todo
+   ```
 
 #### 持久化
 
@@ -70,5 +366,55 @@ RDB 的持久化触发方式有两类：一类是手动触发，另一类是自�
    - 只能保存某个时间间隔的数据，中途Redis服务意外终止，数据会丢失
    - fork()子进程会将数据持久化至磁盘，数据集很大，持久化CPU性能不佳，会影响到住进程
 
+##### AOF 持久化
 
+AOF（Append Only File）中文是附加到文件，顾名思义 AOF 可以把 Redis 每个键值对操作都记录到文件（appendonly.aof）中。
+
+1. 持久化配置
+
+   ```shell
+   config get appendonly #查询 AOF是否启动
+   config set appendonly yes # 启动 AOF
+   config set appendonly no # 关闭 AOF
+   ```
+
+   `redis.conf`中的配置文件中设置`appendonly yes`即可开启AOF
+
+2. 触发持久化
+
+   触发条件有两种自动触发和手动触发
+
+   - 自动触发，满足AOF设置的策略触发，`config get appendonly`，获取AOF策略，主要策略
+
+     - always：每条Redis操作命令都会写入磁盘，最多丢失一条数据
+     - everysec：每秒钟写入一次磁盘，最多丢失一秒的数据
+     - no：不设置写入磁盘的规则，根据当前操作系统来决定何时写入磁盘，Linux默认30s写入一次数据至磁盘
+
+   - 手动触发，在客户端执行`bgrewriteaof`命令，可以触发文件重写
+
+3. 文件重写
+
+   AOF 是通过记录 `Redis` 的**执行命令**来持久化（保存）数据的，不断对`Redis`执行命令`AOF`文件会越来越多，这样不仅增加了服务器的存储压力，也会造成 `Redis` 重启速度变慢，为了解决这个问题 Redis 提供了 AOF 重写的功能。主线程 fork 出后台的 `bgrewriteaof` 子进程,bgrewriteaof 子进程就可以在不影响主线程的情况下，逐一把拷贝的数据写成操作，记入重写日志
+
+   - `auto-aof-rewrite-min-size`允许 AOF 重写的最小文件容量，默认是 64mb
+   - `auto-aof-rewrite-percentage`AOF 文件重写的大小比例，默认值是 100，表示 100%
+
+4. 优缺点
+
+   优点
+
+   - AOF 持久化保存的数据更加完整，最多只会丢失 1s 钟的数据
+   - AOF 采用的是命令追加的写入方式，所以不会出现文件损坏的问题
+   - AOF 持久化文件，非常容易理解和解析，它是把所有 Redis 键值操作命令，即使使用`flushall`也可以恢复数据
+   
+   缺点
+
+   - 对于相同的数据集来说，AOF 文件要大于 RDB 文件
+   - 在 Redis 负载比较高的情况下，RDB 比 AOF 性能更好
+
+##### RDB & AOF 混合持久化
+
+`config set aof-use-rdb-preamble yes`开启混合持久化
+
+当开启了混合持久化时,在 AOF 重写日志时,`fork`出来的重写子进程会先将与主线程共享的内存数据以 RDB 方式写入到 AOF 文件，然后主线程处理的操作命令会被记录在重写缓冲区里，重写缓冲区里的增量命令会以 AOF 方式写入到 AOF 文件，写入完成后通知主进程将新的含有 RDB 格式和 AOF 格式的 AOF 文件替换旧的的 AOF 文件。
 
