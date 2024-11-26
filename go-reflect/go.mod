@@ -1,3 +1,3 @@
-module go-note/go-reflect
+module note/go-reflect
 
 go 1.22.5

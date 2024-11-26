@@ -1,4 +1,4 @@
-module go-note/websocket
+module note/websocket
 
 go 1.22.5
 

@@ -1,8 +1,9 @@
 go 1.22.5
 
 use (
-	go-reflect
+	redis
 	go-rabbitmq
+	go-reflect
 	gorm
 	grpc
 	rpc

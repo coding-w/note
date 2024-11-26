@@ -1,4 +1,4 @@
-module go-note/grpc
+module note/grpc
 
 go 1.22.5
 

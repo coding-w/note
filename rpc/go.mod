@@ -1,3 +1,3 @@
-module go-note/rpc
+module note/rpc
 
 go 1.22.5
