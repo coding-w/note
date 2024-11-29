@@ -154,6 +154,16 @@ HyperLogLog（2.8 版新增）、GEO（3.2 版新增）、Stream（5.0 版新增
    spop key [count]
    
    ## 集合 交集、并集、差集运算 ....
+   # 交集
+   SINTER key [key ...]
+   # 交集的结果保存在新的集合中
+   SINTERSTORE destination key [key ...]
+   # 并集
+   SUNION key [key ...]
+   SUNIONSTORE destination key [key ...]
+   # 差集
+   SDIFF key [key ...]
+   SDIFFSTORE destination key [key ...]
    ```
 
    应用场景
