@@ -1,6 +1,6 @@
 package main
 
-// 基础数据类型常规用法
+// 介绍了redis的基础用法基础数据类型常规用法
 import (
 	"context"
 	"fmt"
@@ -51,9 +51,9 @@ func main() {
 	//geoDemo()
 
 	// 8. Stream()
-	streamDemo()
+	//streamDemo()
 
-	//clearAll()
+	clearAll()
 }
 
 func streamDemo() {

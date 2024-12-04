@@ -1,0 +1,65 @@
+services:
+  redis-0:
+    image: redis:latest
+    container_name: redis-0
+    network_mode: host
+    ports:
+      - "7000:6379"
+    volumes:
+      - ./7000/data:/data
+      - ./7000/conf:/usr/local/etc/redis/
+    environment:
+      TZ: Asia/Shanghai
+    command: redis-server /usr/local/etc/redis/redis.conf
+  redis-1:
+    image: redis:latest
+    container_name: redis-1
+    network_mode: host
+    ports:
+      - "7001:6379"
+    volumes:
+      - ./7001/data:/data
+      - ./7001/conf:/usr/local/etc/redis/
+    environment:
+      TZ: Asia/Shanghai
+    command: redis-server /usr/local/etc/redis/redis.conf
+  redis-2:
+    image: redis:latest
+    container_name: redis-2
+    network_mode: host
+    volumes:
+      - ./7002/data:/data
+      - ./7002/conf:/usr/local/etc/redis/
+    environment:
+      TZ: Asia/Shanghai
+    command: redis-server /usr/local/etc/redis/redis.conf
+  redis-3:
+    image: redis:latest
+    container_name: redis-3
+    network_mode: host
+    volumes:
+      - ./7003/data:/data
+      - ./7003/conf:/usr/local/etc/redis/
+    environment:
+      TZ: Asia/Shanghai
+    command: redis-server /usr/local/etc/redis/redis.conf
+  redis-4:
+    image: redis:latest
+    container_name: redis-4
+    network_mode: host
+    volumes:
+      - ./7004/data:/data
+      - ./7004/conf:/usr/local/etc/redis/
+    environment:
+      TZ: Asia/Shanghai
+    command: redis-server /usr/local/etc/redis/redis.conf
+  redis-5:
+    image: redis:latest
+    container_name: redis-5
+    network_mode: host
+    volumes:
+      - ./7005/data:/data
+      - ./7005/conf:/usr/local/etc/redis/
+    environment:
+      TZ: Asia/Shanghai
+    command: redis-server /usr/local/etc/redis/redis.conf

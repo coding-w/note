@@ -331,6 +331,10 @@ HyperLogLog（2.8 版新增）、GEO（3.2 版新增）、Stream（5.0 版新增
    // todo
    ```
 
+##### 常用数据类型
+
+![images-2024-12-02-10-47-29](../images/images-2024-12-02-10-47-29.png)
+
 #### 持久化
 
 三种持久化方式
@@ -359,10 +363,10 @@ RDB 的持久化触发方式有两类：一类是手动触发，另一类是自�
 
 3. 设置配置，在`redis-cli`操作
    ```shell
-   config get dbfilename
-   config get dir
-   config set dir "" # 设置持久化路径
-   config set save "" # 禁止持久化
+   master-slave-config get dbfilename
+   master-slave-config get dir
+   master-slave-config set dir "" # 设置持久化路径
+   master-slave-config set save "" # 禁止持久化
    ```
    
 4. RDB 优缺点
@@ -384,9 +388,9 @@ AOF（Append Only File）中文是附加到文件，顾名思义 AOF 可以把 R
 1. 持久化配置
 
    ```shell
-   config get appendonly #查询 AOF是否启动
-   config set appendonly yes # 启动 AOF
-   config set appendonly no # 关闭 AOF
+   master-slave-config get appendonly #查询 AOF是否启动
+   master-slave-config set appendonly yes # 启动 AOF
+   master-slave-config set appendonly no # 关闭 AOF
    ```
 
    `redis.conf`中的配置文件中设置`appendonly yes`即可开启AOF
@@ -550,7 +554,7 @@ Redis 会删除已过期的键值，以此来减少 Redis 的空间占用，但�
      ```shell
      127.0.0.1:6379> replicaof 192.168.7.130 6379
      OK
-     127.0.0.1:6379> config set masterauth 123456
+     127.0.0.1:6379> master-slave-config set masterauth 123456
      OK
      ```
 
@@ -558,7 +562,7 @@ Redis 会删除已过期的键值，以此来减少 Redis 的空间占用，但�
 
    首先我们先在主服务器上执行保存数据操作，再去从服务器查询，从服务器只能查询数据
 
-   ![images_2024-11-26_10-21-02](../images/images_2024-11-26_10-21-02.png)
+   ![images_2024-11-26_10-21-02](../images/images-2024-11-26-10-21-02.png)
 
 4. 主从数据同步
 
@@ -686,18 +690,18 @@ Redis 会删除已过期的键值，以此来减少 Redis 的空间占用，但�
    │       └── sentinel.conf       # sentinel 配置文件
    ```
 
-2. [redis.conf](./config/redis.conf) redis基础配置，注意事项
+2. [redis.conf](master-slave-config/redis.conf) redis基础配置，注意事项
 
    - 主节点需要开启持久化配置，[RDB-AOF混合持久化](#rdb--aof-混合持久化)
    - 若需要设置密码，主从库密码要一致
    - 从库需要配置`replicaof 172.30.1.2 6379`从节点连接主节点的地址和端口，以及主节点的密码`masterauth 123456`
 
-3. [sentinel.conf](./config/sentinel.conf) 哨兵配置，注意事项
+3. [sentinel.conf](master-slave-config/sentinel.conf) 哨兵配置，注意事项
 
    - 必须设置监控的主节点`sentinel monitor  <ip> <port> <quorum>`
    - 哨兵在这个时间内未收到主节点的响应，则认为主节点不可用`sentinel down-after-milliseconds <master-name> 5000`
 
-4. [docker-compose.yaml](./config/docker-compose.yaml) 文件，详情请见配置文件，注意事项如下
+4. [docker-compose.yaml](master-slave-config/docker-compose.yaml) 文件，详情请见配置文件，注意事项如下
 
    - 如果在同一台机器上，使用docker做测试，需要新建一个网络通信
    - 将配置文件的目录挂载至容器，而非文件，哨兵需要对文件修改，需要获得目录和文件的权限
@@ -766,13 +770,15 @@ Redis 会删除已过期的键值，以此来减少 Redis 的空间占用，但�
 
 #### Redis 集群
 
+[Redis scales horizontally with a deployment topology called Redis Cluster.](https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/)
+
 Redis采用集群的主要目的是为了解决单机性能和容量的限制问题，增加了高可用性
 
-##### 集群的选择
+##### 集群模式
 
 1. Redis Cluster
 
-   Redis 自带的原生集群莫斯，支持数据分片
+   Redis 自带的原生集群模式，支持数据分片
 
    特点：
 
@@ -811,9 +817,136 @@ Redis Cluster 与 Codis 的对比
 | 使用复杂度  | 相对简单，原生功能               | 相对复杂，需要运维 ZooKeeper/Etcd	  |
 | 场景适用性  | 新系统开发，支持Redis Cluster协议 | 适合老系统改造，无需更改业务代码           |
 
+##### Cluster 实操
 
+1. 集群目录
 
-##### 实操
+   ```text
+   .
+   ├── 7000
+   │   ├── conf
+   │   │   └── redis.conf
+   │   └── data
+   │
+   ├── 7001
+   │   ├── conf
+   │   │   └── redis.conf
+   │   └── data
+   │
+   ├── 7002
+   │   ├── conf
+   │   │   └── redis.conf
+   │   └── data
+   │
+   ├── 7003
+   │   ├── conf
+   │   │   └── redis.conf
+   │   └── data
+   │
+   ├── 7004
+   │   ├── conf
+   │   │   └── redis.conf
+   │   └── data
+   │
+   ├── 7005
+   │   ├── conf
+   │   │   └── redis.conf
+   │   └── data
+   │
+   └── docker-compose.yaml
+   ```
+
+2. [redis.conf](./cluster/redis.conf) redis基础配置，注意事项
+
+   - `cluster-enabled yes` 启用 Redis 的集群模式
+   - `cluster-config-file /data/nodes.conf` 指定存储 Redis 集群状态的配置文件路径
+   - `cluster-node-timeout 5000` 设置 Redis 集群节点间的超时时间
+
+3. [docker-compose.yaml](./cluster/docker-compose.yaml)
+
+   这次实操，是在一个服务器上启动了 6 个节点，并且在同一主机使用docker部署，直接使用的是主机网络，避免出现网络问题
+
+4. 创建集群
+
+   ```shell
+   # 先连接任意一个节点
+   docker exec -it redis-0 /bin/bash
+   # 创建一个新的集群 --cluster-replicas 1 每一个主节点配置一个从节点
+   redis-cli --cluster create 192.168.3.222:7000 192.168.3.222:7001 \
+   192.168.3.222:7002 192.168.3.222:7003 192.168.3.222:7004 192.168.3.222:7005 \
+   --cluster-replicas 1
+   ```
+
+5. 日志分析
+
+   第 4 步，执行日志
+   ```text
+   >>> Performing hash slots allocation on 6 nodes...    # 给三个主库分配哈希槽
+   Master[0] -> Slots 0 - 5460
+   Master[1] -> Slots 5461 - 10922
+   Master[2] -> Slots 10923 - 16383
+   Adding replica 192.168.3.222:7004 to 192.168.3.222:7000         # 给每一个主节点分配一个从节点
+   Adding replica 192.168.3.222:7005 to 192.168.3.222:7001
+   Adding replica 192.168.3.222:7003 to 192.168.3.222:7002
+   >>> Trying to optimize slaves allocation for anti-affinity          # 避免亲和性（anti-affinity），尽量不在同一台物理机上放置主节点及其对应的从节点，下面发出警告
+   [WARNING] Some slaves are in the same host as their master
+   M: d886b043376653f642bbe5c45149a2f77e83b7aa 192.168.3.222:7000      # 三个主节点的唯一id，以及负责哈希槽的范围
+      slots:[0-5460] (5461 slots) master
+   M: c2aa2c6a1aea895b17c80e470cc8a3805f257672 192.168.3.222:7001
+      slots:[5461-10922] (5462 slots) master
+   M: 41c5e7238fdf873506ba32bd21f26c6aeffdd3d1 192.168.3.222:7002
+      slots:[10923-16383] (5461 slots) master
+   S: 950f242794e4b26afe5e2b82d0198c79ff32ef2f 192.168.3.222:7003      # 三个从节点的信息，以及他们的主节点
+      replicates c2aa2c6a1aea895b17c80e470cc8a3805f257672
+   S: 01212bd1dc1bed4bccc0fea21ad5dcbfe384fa5b 192.168.3.222:7004
+      replicates 41c5e7238fdf873506ba32bd21f26c6aeffdd3d1
+   S: 25940bbff999b1dd1f143f8af5fddf9dd65a285e 192.168.3.222:7005
+      replicates d886b043376653f642bbe5c45149a2f77e83b7aa
+   Can I set the above configuration? (type 'yes' to accept): yes
+   >>> Nodes configuration updated
+   >>> Assign a different config epoch to each node
+   >>> Sending CLUSTER MEET messages to join the cluster
+   Waiting for the cluster to join
+   .
+   >>> Performing Cluster Check (using node 192.168.3.222:7000)        # 等待所有节点加入集群
+   M: d886b043376653f642bbe5c45149a2f77e83b7aa 192.168.3.222:7000
+      slots:[0-5460] (5461 slots) master
+      1 additional replica(s)
+   M: 41c5e7238fdf873506ba32bd21f26c6aeffdd3d1 192.168.3.222:7002
+      slots:[10923-16383] (5461 slots) master
+      1 additional replica(s)
+   S: 25940bbff999b1dd1f143f8af5fddf9dd65a285e 192.168.3.222:7005
+      slots: (0 slots) slave
+      replicates d886b043376653f642bbe5c45149a2f77e83b7aa
+   S: 01212bd1dc1bed4bccc0fea21ad5dcbfe384fa5b 192.168.3.222:7004
+      slots: (0 slots) slave
+      replicates 41c5e7238fdf873506ba32bd21f26c6aeffdd3d1
+   M: c2aa2c6a1aea895b17c80e470cc8a3805f257672 192.168.3.222:7001
+      slots:[5461-10922] (5462 slots) master
+      1 additional replica(s)
+   S: 950f242794e4b26afe5e2b82d0198c79ff32ef2f 192.168.3.222:7003
+      slots: (0 slots) slave
+      replicates c2aa2c6a1aea895b17c80e470cc8a3805f257672
+   [OK] All nodes agree about slots configuration.
+   >>> Check for open slots...
+   >>> Check slots coverage...
+   [OK] All 16384 slots covered.
+   ```
+   
+   nodes.conf，中主要记录着集群的主从，以及其分配的哈希槽
+   ```text
+   # 格式
+   <node_id> <ip:port>@<cluster_bus_port>,<optional_fields> <flags> <master_id> <last_ping_sent> <last_pong_rcvd> <config_epoch> <link_state> <slots>
+   # 详细如下
+   41c5e7238fdf873506ba32bd21f26c6aeffdd3d1 192.168.3.222:7002@17002,,tls-port=0,shard-id=895b2a0394527b0cd73aa5434be44130a1fc3254 master - 0 1733302987000 3 connected 10923-16383
+   d886b043376653f642bbe5c45149a2f77e83b7aa 192.168.3.222:7000@17000,,tls-port=0,shard-id=dfb8b8992365af8b487dc1f3078b5c07c70d8379 myself,master - 0 0 1 connected 0-5460
+   25940bbff999b1dd1f143f8af5fddf9dd65a285e 192.168.3.222:7005@17005,,tls-port=0,shard-id=dfb8b8992365af8b487dc1f3078b5c07c70d8379 slave d886b043376653f642bbe5c45149a2f77e83b7aa 0 1733302987520 1 connected
+   01212bd1dc1bed4bccc0fea21ad5dcbfe384fa5b 192.168.3.222:7004@17004,,tls-port=0,shard-id=895b2a0394527b0cd73aa5434be44130a1fc3254 slave 41c5e7238fdf873506ba32bd21f26c6aeffdd3d1 0 1733302987000 3 connected
+   c2aa2c6a1aea895b17c80e470cc8a3805f257672 192.168.3.222:7001@17001,,tls-port=0,shard-id=426b50aaddaa31109ca57eb0b50853bbe58fd9c7 master - 0 1733302987520 2 connected 5461-10922
+   950f242794e4b26afe5e2b82d0198c79ff32ef2f 192.168.3.222:7003@17003,,tls-port=0,shard-id=426b50aaddaa31109ca57eb0b50853bbe58fd9c7 slave c2aa2c6a1aea895b17c80e470cc8a3805f257672 0 1733302987722 2 connected
+   vars currentEpoch 6 lastVoteEpoch 0
+   ```
+
 
 #### Redis 性能测试
 
