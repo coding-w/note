@@ -791,6 +791,25 @@ Redis采用集群的主要目的是为了解决单机性能和容量的限制问
    - 数据分布策略需要高度定制化
    - 不需要复杂的高可用管理，或已有外部的高可用方案
 
+   数据分片(data sharding)
+
+   `Redis`集群不使用一致哈希，而是使用一种不同形式的分片，其中每个键在概念上都是我们称之为哈希槽的一部分。
+   `Redis`集群中有16384个哈希槽，为了计算给定键的哈希槽，我们只需将键进行CRC16哈希然后对16384取模。
+   `Redis`集群中的每个节点负责哈希槽的一个子集，例如，有一个有3个节点(A,B,C)的集群，其中：
+
+   - 节点A包含0 ~ 5500个哈希槽
+   - 节点B包含从5501到11000的哈希槽
+   - 节点C包含从11001到16383的哈希槽
+
+
+   集群端口，集群的每一个端口需要打开两个端口，一个用于为客户端提供服务的端口，另一个为集群的总线端口，默认情况下，集群总线端口是10000+客户端端口。可以通过`cluster-port`设置
+
+
+   Redis Cluster 主从模型，为了保证节点发送故障后节点通信是保持可用，Redis Cluster 使用主从的模式，每一个主节点都有多个副节点。
+   三个主节点三个从节点(A,B,C,A1,B1,C1)，如果主节点B发送故障，集群将提升节点B1为新的主节点继续正常运行，如果B和B1同时发生故障，则`Redis Cluster`将无法继续运行。
+
+   Redis集群不能保证强一致性，集群可能会丢失客户端的确认写入
+
 2. Codis
 
    Codis 是由国人开发的开源Redis分布式代理解决方案，旨在帮助用户管理多个Redis实例，**不在更新**
@@ -861,6 +880,7 @@ Redis Cluster 与 Codis 的对比
    - `cluster-enabled yes` 启用 Redis 的集群模式
    - `cluster-config-file /data/nodes.conf` 指定存储 Redis 集群状态的配置文件路径
    - `cluster-node-timeout 5000` 设置 Redis 集群节点间的超时时间
+   - `cluster-require-full-coverage yes` 默认yes，某主从节点都挂掉了，整个集群都无法提供服务
 
 3. [docker-compose.yaml](./cluster/docker-compose.yaml)
 
@@ -935,7 +955,7 @@ Redis Cluster 与 Codis 的对比
    
    nodes.conf，中主要记录着集群的主从，以及其分配的哈希槽
    ```text
-   # 格式
+   # 格式 提供了每个节点的状态、角色、连接情况以及其他相关信息
    <node_id> <ip:port>@<cluster_bus_port>,<optional_fields> <flags> <master_id> <last_ping_sent> <last_pong_rcvd> <config_epoch> <link_state> <slots>
    # 详细如下
    41c5e7238fdf873506ba32bd21f26c6aeffdd3d1 192.168.3.222:7002@17002,,tls-port=0,shard-id=895b2a0394527b0cd73aa5434be44130a1fc3254 master - 0 1733302987000 3 connected 10923-16383
@@ -946,7 +966,36 @@ Redis Cluster 与 Codis 的对比
    950f242794e4b26afe5e2b82d0198c79ff32ef2f 192.168.3.222:7003@17003,,tls-port=0,shard-id=426b50aaddaa31109ca57eb0b50853bbe58fd9c7 slave c2aa2c6a1aea895b17c80e470cc8a3805f257672 0 1733302987722 2 connected
    vars currentEpoch 6 lastVoteEpoch 0
    ```
+   
+   连接和使用
+   ```shell
+   root@localhost:/data# redis-cli -c -p 7000
+   127.0.0.1:7000> set foo bar
+   -> Redirected to slot [12182] located at 192.168.3.222:7002
+   OK
+   192.168.3.222:7002> set name wang
+   -> Redirected to slot [5798] located at 192.168.3.222:7001
+   OK
+   192.168.3.222:7001> get name
+   "wang"
+   192.168.3.222:7001> get foo
+   -> Redirected to slot [12182] located at 192.168.3.222:7002
+   "bar"
+   192.168.3.222:7002>
+   ```
+   
+6. 对集群重新分片
 
+   详细文章请查阅[Redis官方文档](https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/)
+
+   重新分片可以自动执行，无需以交互方式手动输入参数
+   `redis-cli --cluster reshard <host>:<port> --cluster-from <node-id> --cluster-to <node-id> --cluster-slots <number of slots> --cluster-yes`
+
+   - `<host>:<port>` 指定一个集群中的任意节点地址和端口，这个节点将被用来连接到集群并发起重新分片操作
+   - `--cluster-from <node-id>` 指定源节点的 ID，从此节点中移出哈希槽的主节点 ID
+   - `--cluster-to <node-id>` 指定目标节点的 ID，将哈希槽移入的目标主节点 ID
+   - `--cluster-slots <number of slots>` 指定要移动的哈希槽数量，这个值必须在1到16384之间
+   - `--cluster-yes` 自动确认所有提示，这使得命令可以在没有用户交互的情况下完成整个重新分片过程
 
 #### Redis 性能测试
 
