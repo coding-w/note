@@ -3,8 +3,6 @@ services:
     image: redis:latest
     container_name: redis-0
     network_mode: host
-    ports:
-      - "7000:6379"
     volumes:
       - ./7000/data:/data
       - ./7000/conf:/usr/local/etc/redis/
@@ -15,8 +13,6 @@ services:
     image: redis:latest
     container_name: redis-1
     network_mode: host
-    ports:
-      - "7001:6379"
     volumes:
       - ./7001/data:/data
       - ./7001/conf:/usr/local/etc/redis/
