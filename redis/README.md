@@ -331,9 +331,51 @@ HyperLogLog（2.8 版新增）、GEO（3.2 版新增）、Stream（5.0 版新增
    // todo
    ```
 
-##### 常用数据类型
+##### 常用数据结构
 
+Redis有简单动态字符串、双向链表、压缩列表、哈希表、跳表和整数数组，他们和常用数据类型的对应关系如下
 ![images-2024-12-02-10-47-29](../images/images-2024-12-02-10-47-29.png)
+
+1. 键和值用什么结构组织？
+
+   Redis使用了哈希表来保存所有键值对，哈希表就是一个数组，数组的每个元素称为一个哈希桶，在每一个哈希桶中保存了键值对数据
+   ![images-2024-12-06-15-47-29](../images/images-2024-12-06-15-47-29.png)
+   
+   哈希表保存了所有的键值对，也称为全局哈希表。哈希表的最大好处很明显，就是可以用 O(1) 的时间复杂度来快速查找到键值对——我们只需要计算键的哈希值，就可以知道它所对应的哈希桶位置，然后就可以访问相应的 entry 元素
+   
+   哈希表的 O(1) 复杂度和快速查找键值对，也带来一个问题，**哈希冲突会带来操作阻塞**
+
+2. 哈希表操作变慢
+
+   哈希冲突时不可避免的问题，Redis解决哈希冲突的方式是链式哈希，同一个哈希桶中的多个元素用一个链表来保存，它们之间依次用指针连接。
+   ![images-2024-12-06-16-47-29](../images/images-2024-12-06-16-47-29.png)
+
+   这里会引发另一个问题，哈希冲突链上的元素只能通过指针逐一查找再操作。如果哈希表里写入的数据越来越多，哈希冲突可能也会越来越多，这就会导致某些哈希冲突链过长，进而导致这个链上的元素查找耗时长，效率降低
+
+   Redis的解决措施是渐进式rehash，Redis 默认使用了两个全局哈希表：哈希表 1 和哈希表 2，默认使用哈希表 1，当开始进行rehash时，分为三步：
+
+   - 给哈希表 2 分配更大的空间，例如是当前哈希表 1 大小的两倍；
+   - 把哈希表 1 中的数据重新映射并拷贝到哈希表 2 中；
+   - 释放哈希表 1 的空间。
+
+   为了避免第二步拷贝全部数据造成阻塞，每处理一个请求时，从哈希表 1 中的第一个索引位置开始，顺带着将这个索引位置上的所有 entries 拷贝到哈希表 2 中。
+   避免了一次性大量拷贝的开销，分摊到了多次处理请求的过程中，避免了耗时操作，保证了数据的快速访问
+
+3. 压缩列表
+
+   压缩列表实际上类似于一个数组，数组中的每一个元素都对应保存一个数据。和数组不同的是，压缩列表在表头有三个字段 zlbytes、zltail 和 zllen，分别表示列表长度、列表尾的偏移量和列表中的 entry 个数；压缩列表在表尾还有一个 zlend，表示列表结束。
+   
+   ![images-2024-12-06-17-40-29](../images/images-2024-12-06-17-40-29.png)
+
+   如果我们要查找定位第一个元素和最后一个元素，可以通过表头三个字段的长度直接定位，复杂度是 O(1)。而查找其他元素时，就没有这么高效了，只能逐个查找，此时的复杂度就是 O(N)
+
+4. 跳表
+
+   有序链表只能逐一查找元素，导致操作起来非常缓慢，于是就出现了跳表。具体来说，跳表在链表的基础上，增加了多级索引，通过索引位置的几个跳转，实现数据的快速定位
+   ![images-2024-12-06-17-41-29](../images/images-2024-12-06-17-41-29.png)
+
+不同数据结构查找的时间复杂度
+![images-2024-12-06-17-43-29](../images/images-2024-12-06-17-43-29.png)
 
 #### 持久化
 
@@ -802,7 +844,7 @@ Redis采用集群的主要目的是为了解决单机性能和容量的限制问
    - 节点C包含从11001到16383的哈希槽
 
 
-   集群端口，集群的每一个端口需要打开两个端口，一个用于为客户端提供服务的端口，另一个为集群的总线端口，默认情况下，集群总线端口是10000+客户端端口。可以通过`cluster-port`设置
+   集群端口，集群的每一个节点需要打开两个端口，一个用于为客户端提供服务的端口，另一个为集群的总线端口，默认情况下，集群总线端口是10000+客户端端口。可以通过`cluster-port`设置
 
 
    Redis Cluster 主从模型，为了保证节点发送故障后节点通信是保持可用，Redis Cluster 使用主从的模式，每一个主节点都有多个副节点。
@@ -999,5 +1041,120 @@ Redis Cluster 与 Codis 的对比
 
 #### Redis 性能测试
 
+对Redis进行性能测试，评估Redis缓存能不能顶住系统的吞吐量，对Redis的性能进行测试，有两种测试方式：
 
+   - 编写脚本模拟并发测试
+   - 使用`redis-benchmark`进行测试，Redis自带的性能测试工具
+
+目前的水平有限，也不是专攻Redis中间件，就不编写脚本实现测试`todo`，学习和记录一下`redis-benchmark`工具，[官方原文](https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/benchmarks/)
+
+`redis-benchmark -h`查看redis最常用的命令
+```text
+Usage: redis-benchmark [OPTIONS] [COMMAND ARGS...]
+
+Options:
+ -h <hostname>      Server hostname (default 127.0.0.1)
+ -p <port>          Server port (default 6379)
+ -s <socket>        Server socket (overrides host and port)
+ -a <password>      Password for Redis Auth
+ --user <username>  Used to send ACL style 'AUTH username pass'. Needs -a.
+ -u <uri>           Server URI on format redis://user:password@host:port/dbnum
+                    User, password and dbnum are optional. For authentication
+                    without a username, use username 'default'. For TLS, use
+                    the scheme 'rediss'.
+ -c <clients>       Number of parallel connections (default 50).
+                    Note: If --cluster is used then number of clients has to be
+                    the same or higher than the number of nodes.
+ -n <requests>      Total number of requests (default 100000)
+ -d <size>          Data size of SET/GET value in bytes (default 3)
+ --dbnum <db>       SELECT the specified db number (default 0)
+ -3                 Start session in RESP3 protocol mode.
+ --threads <num>    Enable multi-thread mode.
+ --cluster          Enable cluster mode.
+                    If the command is supplied on the command line in cluster
+                    mode, the key must contain "{tag}". Otherwise, the
+                    command will not be sent to the right cluster node.
+ --enable-tracking  Send CLIENT TRACKING on before starting benchmark.
+ -k <boolean>       1=keep alive 0=reconnect (default 1)
+ -r <keyspacelen>   Use random keys for SET/GET/INCR, random values for SADD,
+                    random members and scores for ZADD.
+                    Using this option the benchmark will expand the string
+                    __rand_int__ inside an argument with a 12 digits number in
+                    the specified range from 0 to keyspacelen-1. The
+                    substitution changes every time a command is executed.
+                    Default tests use this to hit random keys in the specified
+                    range.
+                    Note: If -r is omitted, all commands in a benchmark will
+                    use the same key.
+ -P <numreq>        Pipeline <numreq> requests. Default 1 (no pipeline).
+ -q                 Quiet. Just show query/sec values
+ --precision        Number of decimal places to display in latency output (default 0)
+ --csv              Output in CSV format
+ -l                 Loop. Run the tests forever
+ -t <tests>         Only run the comma separated list of tests. The test
+                    names are the same as the ones produced as output.
+                    The -t option is ignored if a specific command is supplied
+                    on the command line.
+ -I                 Idle mode. Just open N idle connections and wait.
+ -x                 Read last argument from STDIN.
+```
+
+- `-c <clients>`指定并发的连接数量，默认50
+- `-n <requests>`发出的请求总数，默认100000
+- `-d <size> `对于 SET/GET 操作的数据大小（单位：字节），默认是 3 字节
+- `--dbnum <db>`选择使用的数据库编号，默认是 0
+- `--threads <num>`启用多线程模式，并指定使用的线程数
+- `--cluster`启用集群模式
+- `-k <boolean>`是否保持长连接（keep alive），默认 1 表示保持，0 表示每次请求后断开并重新连接
+- `-r <keyspacelen>`用于生成随机键的空间长度。如 -r 1000，那么键将从 0 到 999 中随机选取
+- `-P <numreq>`通过管道一次发送的请求数量，默认是 1
+- `-q`静默测试，只显示 QPS 的值
+- `--precision`设定输出延迟结果的小数点精度，默认是 0，意味着不保留小数部分
+- `--csv`将测试结果输出为 CSV 格式的文件
+- `-l`循环测试
+- `-t <tests>`仅运行逗号分隔的测试列表
+- `-I`空闲模式
+
+
+```shell
+redis-benchmark -h 127.0.0.1 -p 6379 -c 50 -n 100000 -d 256 -t set,get -r 100 -a 123456
+====== SET ======                                                   
+100000 requests completed in 1.59 seconds
+50 parallel clients
+256 bytes payload
+keep alive: 1
+host configuration "save": 60 3
+host configuration "appendonly": yes
+multi-thread: no
+......
+Summary:
+throughput summary: 62932.66 requests per second
+latency summary (msec):
+avg       min       p50       p95       p99       max
+0.709     0.160     0.695     0.943     1.135     8.031
+
+====== GET ======                                                     
+100000 requests completed in 0.89 seconds
+50 parallel clients
+256 bytes payload
+keep alive: 1
+host configuration "save": 60 3
+host configuration "appendonly": yes
+multi-thread: no
+Summary:
+throughput summary: 111731.84 requests per second
+latency summary (msec):
+avg       min       p50       p95       p99       max
+0.236     0.096     0.231     0.327     0.407     0.863
+```
+
+|                | SET            | GET             |
+|----------------|----------------|-----------------|
+| 吞吐量            | 62,932.66 请求/秒 | 111,731.84 请求/秒 |
+| 平均延迟 (avg)     | 0.709 ms       | 0.236 ms        |
+| 最小延迟 (min)     | 0.160 ms       | 0.096 ms        |
+| 中位数延迟 (p50)    | 0.695 ms       | 0.231 ms        |
+| 95 百分位延迟 (p95) | 0.943 ms       | 0.327 ms        |
+| 99 百分位延迟 (p99) | 1.135 ms       | 0.407 ms        |
+| 最大延迟 (max)     | 8.031 ms       | 0.863 ms        |
 
