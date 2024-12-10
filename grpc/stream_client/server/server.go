@@ -1,11 +1,11 @@
 package main
 
 import (
-	"go-note/grpc/stream_client/hello"
 	"google.golang.org/grpc"
 	"io"
 	"log"
 	"net"
+	"note/grpc/stream_client/hello"
 	"strings"
 )
 

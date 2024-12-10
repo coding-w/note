@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"go-note/grpc/interceptor/example"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"net"
+	"note/grpc/interceptor/example"
 	"time"
 )
 

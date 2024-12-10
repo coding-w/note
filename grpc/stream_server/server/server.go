@@ -1,10 +1,10 @@
 package main
 
 import (
-	"go-note/grpc/stream_server/example"
 	"google.golang.org/grpc"
 	"log"
 	"net"
+	"note/grpc/stream_server/example"
 	"strconv"
 	"time"
 )

@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	h "go-note/grpc/base/hello"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"log"
+	h "note/grpc/base/hello"
 	"os"
 	"strings"
 	"time"

@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"go-note/grpc/stream_client/hello"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"log"
+	"note/grpc/stream_client/hello"
 	"os"
 	"time"
 )

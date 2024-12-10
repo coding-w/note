@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"go-note/gorm/domain"
-	"go-note/gorm/initialize"
 	"gorm.io/gorm"
+	"note/gorm/domain"
+	"note/gorm/initialize"
 	"time"
 )
 

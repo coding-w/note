@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	h "go-note/grpc/base/hello"
 	"google.golang.org/grpc"
 	"log"
 	"net"
+	h "note/grpc/base/hello"
 )
 
 type server struct {

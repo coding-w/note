@@ -1,8 +1,8 @@
 package main
 
 import (
-	"go-note/gorm/initialize"
 	"gorm.io/gorm"
+	"note/gorm/initialize"
 )
 
 var db *gorm.DB

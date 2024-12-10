@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"go-note/grpc/interceptor/example"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"log"
+	"note/grpc/interceptor/example"
 )
 
 func main() {

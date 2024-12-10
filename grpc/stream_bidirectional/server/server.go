@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"go-note/grpc/stream_bidirectional/example"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"io"
 	"log"
 	"net"
+	"note/grpc/stream_bidirectional/example"
 	"sync"
 	"time"
 )

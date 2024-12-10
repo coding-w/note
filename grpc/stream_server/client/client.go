@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"go-note/grpc/stream_server/example"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"io"
 	"log"
+	"note/grpc/stream_server/example"
 )
 
 func main() {
