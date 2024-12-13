@@ -1,1 +1,13 @@
 services:
+  mysql:
+    container_name: mysql
+    image: mysql:8.0
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: 123456
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./data:/var/lib/mysql           # 持久化 MySQL 数据目录
+      - ./my.cnf:/etc/mysql/my.cnf      # 挂载自定义的 MySQL 配置文件
+      - ./logs:/var/log/mysql           # 挂载 MySQL 日志文件目录
