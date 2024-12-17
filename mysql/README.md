@@ -1,8 +1,8 @@
-### MySQL
+# MySQL
 
 Docker 安装 MySQL8.0，安装见[docker-compose.yaml](./singleton/docker-compose.yaml)
 
-#### 操作类型
+## 操作类型
 
 SQL 程序语言有四种类型，对数据库的基本操作都属于这四种类，分为 DDL、DML、DQL、DCL
 
@@ -17,11 +17,11 @@ SQL 程序语言有四种类型，对数据库的基本操作都属于这四种�
 3. DQL(Data Query Language 数据查询语言)，用来进行数据库中的数据查询，最常用的就是 select 语句
 4. DCL(Data Control Language 数据控制语言)，用来授权或回收访问数据库的某种特权，并控制数据库操纵事务发生的时间及效果，能够对数据库进行监视
 
-#### 存储过程
+## 存储过程
 
 MySQL数据存储位置可以通过`SHOW VARIABLES LIKE 'datadir';`去获取，每一个数据库都会有一个文件，每一张表都会有一个*.ibd文件，这个文件存储着表数据、索引、UNDO日志等等..
 
-##### 表空间文件结构
+### 表空间文件结构
 
 表空间有文件头(File Header)、段(Segment)、区(Extent)、页(Page)
 
@@ -32,7 +32,7 @@ MySQL数据存储位置可以通过`SHOW VARIABLES LIKE 'datadir';`去获取，�
 
 ![images-2024-12-12-11-15-30](../images/images-2024-12-12-11-15-30.png)
 
-##### 数据页结构
+### 数据页结构
 
 数据库I/O操作的最小单位是页，与数据库相关的内容都会存储在页结构里。数据页包括七个部分，分别是文件头（File Header）、页头（Page Header）、最大最小记录（Infimum+supremum）、用户记录（User Records）、空闲空间（Free Space）、页目录（Page Directory）和文件尾（File Tailer）
 
@@ -42,7 +42,7 @@ MySQL数据存储位置可以通过`SHOW VARIABLES LIKE 'datadir';`去获取，�
 
 
 
-##### 行(Row)格式分类
+### 行(Row)格式分类
 
 MySQL 支持以下几种行格式，具体格式由表的 ROW_FORMAT 定义：Compact（紧凑格式）、Redundant（冗余格式，MySQL 早期版本的默认格式）、Dynamic（动态格式）、Compressed（压缩格式）
 
@@ -64,13 +64,13 @@ CREATE TABLE example (
 | 用户数据 | age=30               | 定长数据直接存储      |
 | 用户数据 | bio 指向溢出页            | 如果数据过大，存储在溢出页 |
 
-#### 存储引擎
+## 存储引擎
 
 可以通过`SELECT * FROM INFORMATION_SCHEMA.ENGINES;`查询数据库支持存储引擎，常见的存储引擎有InnoDB、MyISAM
 
 ![images-2024-12-12-10-22-44](../images/images-2024-12-12-10-22-44.png)
 
-##### InnoDB 存储引擎
+### InnoDB 存储引擎
 
 InnoDB是现在默认的存储引擎，具体参考[官方文档](https://dev.mysql.com/doc/refman/8.0/en/innodb-introduction.html)
 
@@ -96,7 +96,7 @@ InnoDB是现在默认的存储引擎，具体参考[官方文档](https://dev.my
    - 聚簇索引（Clustered Index）存储数据，主键索引和行数据一起存储
    - 辅助索引，辅助索引存储索引键和指向主键的引用，回表
 
-##### MyISAM 存储引擎
+### MyISAM 存储引擎
 
 MyISAM存储引擎是基于较旧的ISAM存储引擎的扩展，具体参考[官方文档](https://dev.mysql.com/doc/refman/8.0/en/myisam-storage-engine.html)
 
@@ -108,7 +108,7 @@ MyISAM存储引擎是基于较旧的ISAM存储引擎的扩展，具体参考[官
 6. 不支持外键
 
 
-##### 选择存储引擎
+### 选择存储引擎
 
 1. 如果系统需要 事务支持、高并发写入、数据一致性（如银行、订单系统）
 
@@ -118,11 +118,11 @@ MyISAM存储引擎是基于较旧的ISAM存储引擎的扩展，具体参考[官
 
    选择 MyISAM
 
-#### 索引
+## 索引
 
 索引是一种用于快速查询和检索数据的数据结构，其本质可以看成是一种排序好的数据结构，索引的作用就相当于书的目录
 
-##### 索引分类
+### 索引分类
 
 1. 按照存储方式划分
 
@@ -144,7 +144,7 @@ MyISAM存储引擎是基于较旧的ISAM存储引擎的扩展，具体参考[官
    - 哈希索引：类似键值对的形式，一次即可定位
    - 全文索引：对文本的内容进行分词，进行搜索
 
-##### BTree
+### BTree
 
 B-Tree（Balanced Tree，平衡树）是一种自我平衡的树数据结构，保持数据有序，时间复杂度为 $O(\log n)$
 
@@ -165,13 +165,71 @@ B-Tree（Balanced Tree，平衡树）是一种自我平衡的树数据结构，�
 - 良好的扩展性：能适应大规模数据和高并发场景。
 
 
+### 索引失效
 
-#### 数据库优化
+1. 字段类型隐式转换
+
+   ```sql
+   -- 索引失效
+   SELECT * FROM user WHERE id = '1';
+   -- 索引生效
+   SELECT * FROM user WHERE id = 1;
+   ```
+
+2. 索引列参与运算
+
+   ```sql
+   -- 索引失效
+   SELECT * FROM user WHERE id + 1 = 10;
+   -- 索引生效
+   SELECT * FROM user WHERE id = 10;
+   ```
+
+3. 索引列使用函数
+
+   ```sql
+   -- 索引失效
+   SELECT * FROM users WHERE SUBSTR(name, 1, 3) = 'Tom'
+   -- 索引生效
+   SELECT * FROM users WHERE name = 'Tom'
+   ```
+
+4. 索引列使用like，且%在前面
+
+   ```sql
+   -- 索引失效
+   SELECT * FROM users WHERE name LIKE '%Tom%'
+   -- 索引生效
+   SELECT * FROM users WHERE name = 'Tom'
+   ```
+
+5. 数据量比较少，优化器不走索引
+   
+
+5. 索引列使用!=、<>、!<、!>、NOT IN、NOT LIKE、NOT BETWEEN、IS NOT NULL
+
+   ```sql
+   -- 索引失效
+   SELECT * FROM users WHERE id != 1;
+   -- 索引生效
+   SELECT * FROM users WHERE id = 1;
+   ```
+
+6. 容易误解的地方是 <、> 走不走索引，在MySQL8.0中，<、> 针对数字类型走索引会走索引
+
+   - 当匹配的数据量超过表总数据量的20%-30%时，优化器倾向于选择全表扫描，索引也会失效
+
+7. 索引列使用OR
+8. 索引列使用复合索引， 违反最左前缀原则
+
+
+
+## 数据库优化
 
 数据库优化，为了提高SQL的执行效率，更加快速的完成SQL运行，可以数据库层面和硬件层面两个方面进行优化。
 硬件层面造成的瓶颈通常有：磁盘寻道、磁盘读写、CPU周期、内存带宽等等。这里主要是从数据库层进行优化，详情参看[官方文档](https://dev.mysql.com/doc/refman/8.0/en/optimize-overview.html)
 
-##### SQL执行过程
+### SQL执行过程
 
 在开始数据库优化之前，先了解SQL查询语句如何执行的，执行`SELECT`语句时，执行的先后顺序.
 
@@ -209,7 +267,7 @@ B-Tree（Balanced Tree，平衡树）是一种自我平衡的树数据结构，�
    ```
    在SELECT语句执行这些步骤的时候，每个步骤都会产生一个虚拟表，然后将这个虚拟表传入下一个步骤中作为输入
 
-##### 优化数据库结构
+### 优化数据库结构
 
 1. 在建数据表时，先预估数据表的容量，数据表存放的数据量较大，要对数据表进行[分区](#分区)
 2. 优化数据类型
@@ -225,7 +283,7 @@ B-Tree（Balanced Tree，平衡树）是一种自我平衡的树数据结构，�
    - 行数没有明确要求，但是和数据表“页”相关
 6. [配置缓冲池](https://dev.mysql.com/doc/refman/8.0/en/innodb-performance-buffer-pool.html)
 
-##### 优化SQL
+### 优化SQL
 
 优化SQL需要一个过程的优化和判断才能达到预期，
 
@@ -237,7 +295,7 @@ B-Tree（Balanced Tree，平衡树）是一种自我平衡的树数据结构，�
    - 索引优化，建立合适索引，在查询时保证索引生效
    - 连接优化，小表连接大表，连接条件尽可能的缩小表的大小
 
-2. 建立合适索引，甄别正确的列做二级索引和二级联合索引，要合理使用覆盖索引，MySQL创建索引
+2. 建立合适索引，甄别正确的列做二级索引和二级联合索引，合理使用覆盖索引，避免[索引失效](#索引失效)，MySQL创建索引
 
    ```sql
    CREATE [UNIQUE | FULLTEXT | SPATIAL] INDEX index_name
@@ -303,17 +361,191 @@ B-Tree（Balanced Tree，平衡树）是一种自我平衡的树数据结构，�
 
 最后引用[美团技术团队的一段话](https://tech.meituan.com/2014/06/30/mysql-index.html)，任何数据库层面的优化都抵不上应用系统的优化，同样是MySQL，可以用来支撑Google/FaceBook/Taobao应用，但可能个人网站都撑不住。套用最近比较流行的话：“查询容易，优化不易，且写且珍惜！”
 
-#### 锁
+## 锁
+
+[InnoDB Locking](https://dev.mysql.com/doc/refman/8.0/en/innodb-locking.html)
+
+1. 共享锁与排他锁 (Shared and Exclusive Locks)
+
+   - 共享锁(S锁)：允许其他事务读取数据，但不允许其他事务修改数据
+
+   ```sql
+   SELECT * FROM table_name WHERE id = 1 LOCK IN SHARE MODE;
+   -- 或
+   SELECT * FROM users WHERE id = 1 FOR SHARE;
+   ```
+
+   - 排他锁(X锁)：允许其他事务读取和修改数据
+
+   ```sql
+   SELECT * FROM table_name WHERE id = 1 FOR UPDATE;
+   ```
+
+2. 意向锁 (Intention Locks)
+
+   - 意向锁是一种表级锁，用于表示事务将要对表中的某些行进行加锁
+   ```sql
+   -- 意向锁是表级锁，在获取行锁之前自动设置
+   -- 意向共享锁（IS）：表示事务打算给表中的某些行加共享锁
+   SELECT * FROM table_name WHERE id = 1 LOCK IN SHARE MODE;
+   -- 意向排他锁（IX）：表示事务打算给表中的某些行加排他锁
+   SELECT * FROM table_name WHERE id = 1 FOR UPDATE;
+   ```
+
+3. 记录锁 (Record Locks)
+
+   - 记录锁是一种行级锁，用于锁定单个行
+
+   ```sql
+   SELECT * FROM table_name WHERE id = 1 FOR UPDATE;
+   -- 特点：
+   -- 锁定单个索引记录
+   -- 防止其他事务修改或删除该记录
+   -- 必须是精确匹配的查询条件
+   ```
+
+4. 间隙锁 (Gap Locks)
+
+   - 间隙锁是一种间隙级锁，用于锁定索引记录之间的间隙
+
+   ```sql
+   SELECT * FROM table_name WHERE id BETWEEN 1 AND 10 FOR UPDATE;
+   ```
+   特点：
+   - 锁定范围，防止其他事务在范围内插入数据
+   - 防止幻读
+   - 只在REPEATABLE READ隔离级别下生效
+
+5. 临键锁 (Next-Key Locks)
+
+   - 临键锁是一种行级锁，用于锁定索引记录及其之间的间隙
+
+   ```sql
+   -- Record Lock + Gap Lock
+   SELECT * FROM users WHERE age > 20 FOR UPDATE;
+   ```
+
+   - 特点：
+     - 锁定索引记录及其之间的间隙
+     - 防止幻读
+     - 在REPEATABLE READ隔离级别下生效
+
+6. 插入意向锁 (Insert Intention Locks)
+
+   - 插入新记录时自动获取
+
+7. 自增锁 (Auto Increment Locks)
+
+   - 自增锁是一种表级锁，用于确保多个事务对自增列的并发插入操作的正确性
+   ```sql
+   CREATE TABLE t1 (
+     c1 INT(11) NOT NULL AUTO_INCREMENT,
+     c2 VARCHAR(10) DEFAULT NULL,
+     PRIMARY KEY (c1)
+   ) ENGINE=InnoDB;
+   ```
+
+## 事物
+
+事务（Transaction）是一组作为单个逻辑工作单元执行的SQL语句，它具有ACID特性：
+
+   - 原子性（Atomicity）：事务中的所有操作要么全部成功，要么全部失败，不能部分成功或部分失败
+   - 一致性（Consistency）：事务执行前后，数据库的状态保持一致
+   - 隔离性（Isolation）：多个事务并发执行时，每个事务的执行结果不受其他事务的影响
+   - 持久性（Durability）：事务一旦提交，对数据库的修改将永久保存
+
+### 事务隔离级别
+
+并发控制时会出现问题
+
+   - 脏读：一个事务读取另一个事务未提交的数据
+   - 不可重复读：同一事务内多次读取数据时，数据发生变化
+   - 幻读：事务之间的数据插入或删除导致查询结果不一致
 
 
-#### 事物
+MySQL的隔离级别可以解决上述问题，支持四种隔离级别
+
+1. 读未提交（Read Uncommitted）
+
+   - 允许脏读、不可重复读和幻读
+   - 事务可以读取其他事务未提交的数据
+
+2. 读已提交（Read Committed）
+
+   - 解决了脏读问题，但仍然可能发生不可重复读和幻读
+   - 事务只能读取其他事务已提交的数据
+
+3. 可重复读（Repeatable Read）
+
+   - 解决了脏读和不可重复读问题，但仍然可能发生幻读
+   - 事务会对读取的数据加锁，保证该数据在事务内不会被修改
+
+4. 串行化（Serializable）
+
+   - 解决了脏读、不可重复读和幻读问题
+   - 对同一行记录，写操作会加锁，读操作会加共享锁，从而避免幻读
+
+![](../images/images-2024-12-17-16-45-57.png)
+
+### MVCC
+
+在MySQL中，默认的隔离级别是可重复读，可以解决脏读和不可重复读的问题，但不能解决幻读问题。如果想要解决幻读问题，就需要采用串行化的方式，也就是将隔离级别提升到最高，但这样一来就会大幅降低数据库的事务并发能力。
+
+#### 什么是快照读和当前读？
+
+1. 快照读读取的数据是快照数据，不加锁的简单的SELECT操作都属于快照读
+2. 当前读读取的数据是当前最新的数据，需要加锁的SELECT操作都属于当前读
+
+快照读就是普通的读操作，而当前读包括了加锁的读取和DML操作
+
+#### 什么是 MVCC
+
+MVCC（Multi-Version Concurrency Control，多版本并发控制），通过数据行的多个版本管理来实现数据库的并发控制，它的思想就是保存数据的历史版本
+
+在并发读写数据库时，可以做到在读操作时不用阻塞写操作，写操作也不用阻塞读操作，提高了数据库并发读写的性能。同时还可以解决脏读，幻读，不可重复读等事务隔离问题，但不能解决更新丢失问题
 
 
-#### 分区
+#### MVCC实现原理
+
+MVCC 的实现主要依赖于：隐藏字段、`undo log`、Read View。
+
+在内部实现中，InnoDB 通过数据行的 DB_TRX_ID 和 Read View 来判断数据的可见性，如不可见，则通过数据行的 DB_ROLL_PTR 找到 undo log 中的历史版本。每个事务读到的数据版本可能是不一样的，在同一个事务中，用户只能看到该事务创建 Read View 之前已经提交的修改和该事务本身做的修改
+
+[原文](https://dev.mysql.com/doc/refman/8.0/en/innodb-multi-versioning.html)
+
+##### 隐藏字段
+
+每条行记录除了自定义之外，InnoDB 还维护了以下隐藏字段
+```sql
+CREATE TABLE users (
+   id INT,
+   name VARCHAR(50)
+   -- 以下是InnoDB自动维护的隐藏字段
+   -- DB_TRX_ID     -- 事务ID：记录最后一次修改该行的事务ID
+   -- DB_ROLL_PTR   -- 回滚指针：指向上一个版本的记录
+   -- DB_ROW_ID     -- 如果没有设置主键且该表没有唯一非空索引时，InnoDB 会使用该 id 来生成聚簇索引
+);
+```
+
+##### undo log
+
+`undo log` 是用于事物回滚；当读取记录时，该记录被其他事物占用，则需要通过`undo log`来找到之前的数据版本，实现非锁定读。`undo log`主要分为两类：
+
+- insert undo log：事务对`insert`操作的`undo log`，`insert`操作的记录只对事务本身可见，对其他事务不可见，事务提交后，该`undo log`可以直接删除
+- update undo log：事务对`update`操作的`undo log`，事务提交后，该`undo log`会被`purge线程`删除
+
+不同事物或者相同事物对同一行记录的`update`或者`delete`操作，会使该记录行的`undo log`成为一条链表，链首就是最新的记录，链尾就是最早的旧记录
+
+##### Read View
 
 
-#### 主从
 
 
-#### 集群
+## 分区
+
+
+## 主从
+
+
+## 集群
 
