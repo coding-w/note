@@ -487,6 +487,21 @@ MySQL的隔离级别可以解决上述问题，支持四种隔离级别
 
 ![](../images/images-2024-12-17-16-45-57.png)
 
+```sql
+-- 查看当前事务隔离级别
+SHOW VARIABLES LIKE 'transaction_isolation';
+-- 设置事务隔离级别
+-- READ-UNCOMMITTED（最低级别）
+-- READ-COMMITTED
+-- REPEATABLE-READ（MySQL 的默认隔离级别）
+-- SERIALIZABLE（最高级别）
+SET GLOBAL transaction_isolation = 'REPEATABLE-READ';
+-- 开启事务
+START TRANSACTION;
+-- 提交事务
+COMMIT;
+```
+
 ### MVCC
 
 在MySQL中，默认的隔离级别是可重复读，可以解决脏读和不可重复读的问题，但不能解决幻读问题。如果想要解决幻读问题，就需要采用串行化的方式，也就是将隔离级别提升到最高，但这样一来就会大幅降低数据库的事务并发能力。
@@ -538,14 +553,153 @@ CREATE TABLE users (
 
 ##### Read View
 
+Read View 记录了当前事务能看到的版本，这些版本的数据基于事务开始时的快照。
+
+Read View的结构，Read View](https://github.com/facebook/mysql-8.0/blob/8.0/storage/innobase/include/read0types.h#L298)主要是用来做可见行判断，主要字段有
+
+- m_low_limit_id：目前出现过的最大的事务 ID+1，即下一个将被分配的事务 ID。大于等于这个 ID 的数据版本均不可见
+- m_up_limit_id：活跃事务列表 m_ids 中最小的事务 ID，如果 m_ids 为空，则 m_up_limit_id 为 m_low_limit_id。小于这个 ID 的数据版本均可见
+- m_ids：Read View 创建时其他未提交的活跃事务 ID 列表。创建 Read View时，将当前未提交事务 ID 记录下来，后续即使它们修改了记录行的值，对于当前事务也是不可见的。m_ids 不包括当前事务自己和已提交的事务（正在内存中）
+- m_creator_trx_id：创建该 Read View 的事务 ID
+
+##### RC 和 RR 隔离级别下 MVCC 的差异
+
+在事务隔离级别 RC 和 RR （InnoDB 存储引擎的默认事务隔离级别）下，InnoDB 存储引擎使用 MVCC（非锁定一致性读），但它们生成 Read View 的时机却不同
+
+- 在 RC 隔离级别下，每次select查询会生成并获取最新的Read View(m_ids 列表)
+- 在 RR 隔离级别下，同一个事务中的第一个快照读才会创建Read View，之后的快照读获取的都是同一个Read View
+
+##### MVCC 解决不可重复读问题
+
+举个例子：
+
+|     | 事物1                                     | 事物2                                        | 事物3                             |
+|:----|:----------------------------------------|:-------------------------------------------|:--------------------------------|
+| T1  | START TRANSACTION;                      |                                            |                                 |
+| T2  |                                         | START TRANSACTION;                         | START TRANSACTION;              |
+| T3  | update users set name='Job' where id=1; |                                            |                                 |
+| T4  | select * from users where id=1;         | select * from users where id=1;            |                                 |
+| T5  | update users set name='Tom' where id=1; |                                            |                                 |
+| T6  | select * from users where id=1;         |                                            | select * from users where id=1; |
+| T7  | commit;                                 | update users set name='Bill' where id=1;   |                                 |
+| T8  |                                         |                                            | select * from users where id=1; |
+| T9  |                                         | update users set name='Andrew' where id=1; |                                 |
+| T10 |                                         | commit;                                    | select * from users where id=1; |
+| T11 |                                         |                                            | commit;                         |
+
+**在RR隔离级别下**
+
+- T2 时刻
+
+![](../images/mysql/mysql-2024-12-18-16-07-47.png)
+
+- T4 时刻
+
+![](../images/mysql/mysql-2024-12-18-16-09-41.png)
+
+- T6 时刻
+
+![](../images/mysql/mysql-2024-12-18-16-12-06.png)
+
+- T8 时刻
+
+![](../images/mysql/mysql-2024-12-18-16-14-25.png)
+
+- T10 时刻
+
+![](../images/mysql/mysql-2024-12-18-16-17-39.png)
 
 
+**在RC隔离级别下**
+
+- T2 时刻
+
+![](../images/mysql/mysql-2024-12-18-16-34-04.png)
+
+- T4 时刻
+
+![](../images/mysql/mysql-2024-12-18-16-35-53.png)
+
+- T6 时刻
+
+![](../images/mysql/mysql-2024-12-18-16-38-09.png)
+
+- T8 时刻
+
+![](../images/mysql/mysql-2024-12-18-16-39-37.png)
+
+- T10 时刻
+
+![](../images/mysql/mysql-2024-12-18-16-44-15.png)
+
+
+// todo 按照 read view 分析 ...
+
+##### MVCC➕Next-key-Lock 防止幻读
+
+1. 执行普通 select，此时会以 MVCC 快照读的方式读取数据
+   
+   RR 隔离级别只会在事务开启后的第一次查询生成 Read View ，并使用至事务提交。所以在生成 Read View 之后其它事务所做的更新、插入记录版本对当前事务并不可见，实现了可重复读和防止快照读下的 “幻读”
+
+2. 执行 select...for update/lock in share mode、insert、update、delete 等当前读
+
+   当前读读取的是最新的数据，并且会对读取到的数据加锁，防止其他事务修改或删除该数据。在执行 insert、update、delete 操作时，会以当前读的方式读取数据，并加锁，防止其它事务在查询范围内插入数据，从而实现防止幻读
 
 ## 分区
 
+MySQL 8.0中的分区是将数据表按一定的规则划分成多个子表，这些子表被称为“分区”。分区可以帮助提高大数据量表的性能，特别是在执行查询、更新、删除等操作时。详情参考[原文](https://dev.mysql.com/doc/refman/8.0/en/partitioning-overview.html)
+
+### 分区类型
+
+1. [范围分区(RANGE Partitioning)](https://dev.mysql.com/doc/refman/8.0/en/partitioning-range.html)
+
+   范围分区是根据列的值将数据分配到不同的分区中，每个分区包含的值范围是连续的。
+   
+   ```sql
+   CREATE TABLE employees (
+      id INT NOT NULL,
+      fname VARCHAR(30),
+      lname VARCHAR(30),
+      hired DATE NOT NULL DEFAULT '1970-01-01',
+      separated DATE NOT NULL DEFAULT '9999-12-31',
+      job_code INT NOT NULL,
+      store_id INT NOT NULL
+   )
+   PARTITION BY RANGE (store_id) (
+      PARTITION p0 VALUES LESS THAN (6),
+      PARTITION p1 VALUES LESS THAN (11),
+      PARTITION p2 VALUES LESS THAN (16),
+      PARTITION p3 VALUES LESS THAN (21)
+   );
+   ```
+   
+   商店 1 到 5 的员工对应的所有数据存储在分区中 p0，商店 6 到 10 的员工对应的所有数据存储在分区中p1，以此类推。这里会有一个问题是`store_id`大于20之后会报错：`SQL 错误 [1526] [HY000]: Table has no partition for value 21`
+
+2. [列表分区(LIST Partitioning)](https://dev.mysql.com/doc/refman/8.0/en/partitioning-list.html)
+
+3. [哈希分区(HASH Partitioning)](https://dev.mysql.com/doc/refman/8.0/en/partitioning-hash.html)
+
+4. [键分区(KEY Partitioning)](https://dev.mysql.com/doc/refman/8.0/en/partitioning-key.html)
+
+### 分区管理
+
+1. 创建分区
+
+2. 删除分区
+
+3. 查看分区
+
+4. 修改分区
+
+### 分区选择
+
+### 分区的限制和局限性
 
 ## 主从
 
 
 ## 集群
+
+### 分库分表
+
 
