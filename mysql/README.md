@@ -204,9 +204,8 @@ B-Tree（Balanced Tree，平衡树）是一种自我平衡的树数据结构，�
    ```
 
 5. 数据量比较少，优化器不走索引
-   
 
-5. 索引列使用!=、<>、!<、!>、NOT IN、NOT LIKE、NOT BETWEEN、IS NOT NULL
+6. 索引列使用!=、<>、!<、!>、NOT IN、NOT LIKE、NOT BETWEEN、IS NOT NULL
 
    ```sql
    -- 索引失效
@@ -215,14 +214,12 @@ B-Tree（Balanced Tree，平衡树）是一种自我平衡的树数据结构，�
    SELECT * FROM users WHERE id = 1;
    ```
 
-6. 容易误解的地方是 <、> 走不走索引，在MySQL8.0中，<、> 针对数字类型走索引会走索引
+7. 容易误解的地方是 <、> 走不走索引，在MySQL8.0中，<、> 针对数字类型走索引会走索引
 
    - 当匹配的数据量超过表总数据量的20%-30%时，优化器倾向于选择全表扫描，索引也会失效
 
-7. 索引列使用OR
-8. 索引列使用复合索引， 违反最左前缀原则
-
-
+8. 索引列使用OR
+9. 索引列使用复合索引， 违反最左前缀原则
 
 ## 数据库优化
 
@@ -673,27 +670,233 @@ MySQL 8.0中的分区是将数据表按一定的规则划分成多个子表，�
    );
    ```
    
-   商店 1 到 5 的员工对应的所有数据存储在分区中 p0，商店 6 到 10 的员工对应的所有数据存储在分区中p1，以此类推。这里会有一个问题是`store_id`大于20之后会报错：`SQL 错误 [1526] [HY000]: Table has no partition for value 21`
+   商店 1 到 5 的员工对应的所有数据存储在分区中 p0，商店 6 到 10 的员工对应的所有数据存储在分区中p1，以此类推。这里会有一个问题是`store_id`大于20之后会报错：`SQL 错误 [1526] [HY000]: Table has no partition for value 21`。也可以使用`ALTER TABLE`语句来添加新的分区，使用`DROP PARTITION`语句来删除分区。
+
+   ```sql
+   -- 添加分区
+   ALTER TABLE employees ADD PARTITION (PARTITION p4 VALUES LESS THAN (26));
+   -- 删除分区
+   ALTER TABLE employees DROP PARTITION p4;
+
+   CREATE TABLE employees (
+      id INT NOT NULL,
+      fname VARCHAR(30),
+      lname VARCHAR(30),
+      hired DATE NOT NULL DEFAULT '1970-01-01',
+      separated DATE NOT NULL DEFAULT '9999-12-31',
+      job_code INT NOT NULL,
+      store_id INT NOT NULL
+   )
+   PARTITION BY RANGE (store_id) (
+      PARTITION p0 VALUES LESS THAN (6),
+      PARTITION p1 VALUES LESS THAN (11),
+      PARTITION p2 VALUES LESS THAN (16),
+      PARTITION p3 VALUES LESS THAN MAXVALUE -- 最大值 MAXVALUE表示一个整数值，该值始终大于最大可能整数值（在数学语言中，它充当 最小上界）
+   );
+   ```
 
 2. [列表分区(LIST Partitioning)](https://dev.mysql.com/doc/refman/8.0/en/partitioning-list.html)
 
+   列表分区在许多方面与范围分区相似，每个分区都必须明确定义。这两种分区类型之间的主要区别在于，在列表分区中，每个分区都是根据列值在一组值列表之一中的成员资格来定义和选择的，而不是在一组连续值范围之一中定义和选择的。这是通过使用其中 是列值或基于列值的表达式并返回整数值，然后通过定义每个分区来完成的。
+   
+   ```sql
+   CREATE TABLE h2 (
+      c1 INT,
+      c2 INT
+   )
+   PARTITION BY LIST (c1) (
+      PARTITION p0 VALUES IN (1, 2),
+      PARTITION p1 VALUES IN (3, 4)
+   );
+   ```
+
+   c1 的值为 1 或 2 的数据存储在分区 p0，c1 的值为 3 或 4 的数据存储在分区 p1，如果 c1 的值为 5，则会报错：`SQL 错误 [1526] [HY000]: Table has no partition for value 5`，如果想避免这种错误，可以`IGNORE`让编辑器忽略错误，给出警告
+
+   ```sql
+   INSERT IGNORE INTO h2 VALUES (2, 5), (6, 10), (7, 5), (3, 1), (1, 9);
+   -- Query OK, 3 rows affected, 2 warnings (0.01 sec)
+   -- Records: 5  Duplicates: 2  Warnings: 2
+   ```
+
+   ![](../images/mysql/mysql-2024-12-20-09-39-48.png)
+
+   这里我要吐槽一个点，列表分区的分区列，没有默认分区，[原文](https://dev.mysql.com/doc/refman/8.0/en/partitioning-list.html)Unlike the case with RANGE partitioning, there is no “catch-all” such as MAXVALUE; all expected values for the partitioning expression should be covered in PARTITION ... VALUES IN (...) clauses. An INSERT statement containing an unmatched partitioning column value fails with an error
+
 3. [哈希分区(HASH Partitioning)](https://dev.mysql.com/doc/refman/8.0/en/partitioning-hash.html)
+
+   使用HASH进行分区主要是为了确保数据在预定数量的分区中均匀分布。对于范围或列表分区，必须显式指定应该将给定的列值或列值集存储在哪个分区中；Hash分区通过对某个（或多个）列的值应用哈希算法，计算出一个哈希值，然后将这个哈希值映射到不同的分区。
+
+   ```sql
+   CREATE TABLE employees (
+      id INT NOT NULL,
+      fname VARCHAR(30),
+      lname VARCHAR(30),
+      hired DATE NOT NULL DEFAULT '1970-01-01',
+      separated DATE NOT NULL DEFAULT '9999-12-31',
+      job_code INT,
+      store_id INT
+   )
+   PARTITION BY HASH(store_id)
+   PARTITIONS 4;
+   ```
+
+   除了常规哈希分区，还有线性哈希分区，它与常规散列的不同之处在于，线性散列利用线性二次幂算法，而常规散列采用散列函数值的模数。
+
+   ```sql
+   CREATE TABLE employees (
+      id INT NOT NULL,
+      fname VARCHAR(30),
+      lname VARCHAR(30),
+      hired DATE NOT NULL DEFAULT '1970-01-01',
+      separated DATE NOT NULL DEFAULT '9999-12-31',
+      job_code INT,
+      store_id INT
+   )
+   PARTITION BY LINEAR HASH( YEAR(hired) ) PARTITIONS 4;
+   ```
 
 4. [键分区(KEY Partitioning)](https://dev.mysql.com/doc/refman/8.0/en/partitioning-key.html)
 
+   `Key Partitioning`是MySQL分区的一种方式，它基于指定列的哈希值来将数据分配到不同的分区。与`Hash Partitioning`类似，`Key Partitioning`也是通过计算某个或多个列的哈希值来决定数据应该放置在哪个分区，但与Hash分区不同的是，`Key Partitioning`使用的是MySQL内部的哈希函数，而不是用户定义的哈希函数
+
+   ```sql
+   CREATE TABLE k1 (
+      id INT NOT NULL,
+      name VARCHAR(20),
+      UNIQUE KEY (id)
+   )
+   PARTITION BY KEY()
+   PARTITIONS 2;
+   ```
+
+5. [复合分区(Composite Partitioning)](https://dev.mysql.com/doc/refman/8.0/en/partitioning-composite.html)
+
+   复合分区是对分区表中的每个分区进行进一步划分，复合分区可以结合多种分区类型，例如，可以结合范围分区、列表分区、哈希分区等
+
+   ```sql
+   CREATE TABLE ts (id INT, purchased DATE)
+      PARTITION BY RANGE( YEAR(purchased) )
+      SUBPARTITION BY HASH( TO_DAYS(purchased) ) (
+         PARTITION p0 VALUES LESS THAN (1990) (
+               SUBPARTITION s0,
+               SUBPARTITION s1
+         ),
+         PARTITION p1 VALUES LESS THAN (2000) (
+               SUBPARTITION s2,
+               SUBPARTITION s3
+         ),
+         PARTITION p2 VALUES LESS THAN MAXVALUE (
+               SUBPARTITION s4,
+               SUBPARTITION s5
+         )
+    );
+   ```
+
 ### 分区管理
 
-1. 创建分区
+1. [RANGE 和 LIST 分区的管理](https://dev.mysql.com/doc/refman/8.0/en/partitioning-management-range-list.html)
 
-2. 删除分区
+   ```sql
+   create table h (
+      c1 int,
+      c2 int
+   )
+   partition by RANGE (c1) (
+      partition s1 VALUES less than(5),
+      partition s2 VALUES less than(10),
+   -- 	partition s3 VALUES less than MAXVALUE
+   );
+   ```
+   - 添加分区
+   ```sql
+   ALTER TABLE h ADD PARTITION (PARTITION s4 VALUES LESS THAN (27));
+   -- 注意事项：
+   -- 1. 添加分区时，新分区的值必须大于现有分区的最大值
+   -- 2. 如果设置了MAXVALUE，则无法添加新的分区
+   ```
+   - 删除分区
+   ```sql
+   ALTER TABLE employees DROP PARTITION p4;
+   -- 注意事项：
+   -- 1. 删除分区时，分区中的数据会被删除
+   -- 2. 删除分区时，分区中的索引会被删除
+   -- 3. 删除分区时，分区中的触发器会被删除
+   ```
 
-3. 查看分区
+   - 重定义分区
+   ```sql
+   ALTER TABLE h REORGANIZE PARTITION s1 INTO (
+      PARTITION n0 VALUES LESS THAN (2),
+      PARTITION n11 VALUES LESS THAN (3)
+   );
+   ```
+   
+   - 合并分区
+   ```sql
+   ALTER TABLE h REORGANIZE PARTITION s1, s2 INTO (
+      PARTITION n0 VALUES LESS THAN (4)
+   );
 
-4. 修改分区
+   -- 拆分或合并分区不会丢失任何数据 
+   ```
 
-### 分区选择
+   - 清空分区
+   ```sql
+   ALTER TABLE h TRUNCATE PARTITION s1;
+   ```
+
+2. [HASH 和 KEY 分区的管理](https://dev.mysql.com/doc/refman/8.0/en/partitioning-management-hash-key.html)
+
+   ```sql
+   CREATE TABLE clients (
+      id INT,
+      fname VARCHAR(30),
+      lname VARCHAR(30),
+      signed DATE
+   )
+   PARTITION BY HASH( MONTH(signed) )
+   PARTITIONS 12;
+   ```
+
+   - 添加分区
+   ```sql
+   ALTER TABLE clients ADD PARTITION PARTITIONS 6;
+   ```
+
+   - 减少分区
+   ```sql
+   ALTER TABLE clients COALESCE PARTITION 4;
+   ```
 
 ### 分区的限制和局限性
+
+1. 分区键必须是整数或NULL
+2. 最大分区数（包含子分区）：8192
+3. 不能使用外键
+
+
+#### 分区键与唯一键的关系
+1. 分区键的定义和要求
+   
+   - **分区键**：用于将表中的数据分配到不同的分区。每个分区包含表中一部分数据。分区键是用来决定每行数据存储在哪个分区的列或表达式。
+   - 在 MySQL 中，分区键必须是表的所有主键列或唯一键列的一部分。这意味着，如果你为一个表设置分区，表的主键或唯一键必须包含在分区定义的键中。
+
+2. 唯一键与分区键的关系
+
+   - **唯一键约束**：用于保证表中每一行数据的唯一性。MySQL 允许通过一个或多个列创建唯一键约束。
+   - 当使用分区时，唯一键（包括主键）和分区键有一个关键的关系：每个分区的唯一键必须是**跨分区唯一**的。这意味着所有分区加起来的唯一键必须在全局范围内唯一。
+   - **在分区表中，分区键必须包含在唯一键的组成部分中**。也就是说，唯一键必须包含分区键。否则，可能会导致分区之间的数据重复，从而违反唯一性约束。
+
+3. 主键与唯一键的限制
+   
+   - 如果表有主键（PRIMARY KEY），则**主键列必须包含分区键**。否则，数据库无法确定每行数据应该分配到哪个分区，违反了分区规则。
+   - 对于非主键的唯一键（UNIQUE KEY），其列也必须包含分区键的一部分。否则，MySQL 无法保证唯一性约束的有效性，因为分区可能会导致在不同分区中插入重复的数据。
+   - 在某些情况下，可能会因为分区键的限制而无法在表中定义一些复杂的唯一键。
+
+4. 如何设计分区键和唯一键
+   
+   - 在设计分区表时，应确保分区键与主键或唯一键结合使用，遵循这些约束。
+   - 在创建分区表时，需要特别注意分区键的选择，因为它会影响性能以及表的数据分布。合理的选择分区键不仅能优化查询性能，还能避免与唯一键约束产生冲突。
 
 ## 主从
 
