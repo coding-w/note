@@ -1,8 +1,8 @@
-### Redis
+# Redis
 
 1. [系统环境](#系统环境)
 2. [Docker安装](#docker-安装)
-3. [常见数据类型](#常见数据类型)
+3. [常见数据类型](#数据类型)
    - [常用数据类型](#常用数据类型)
    - [常用数据结构](#常用数据结构)
 4. [持久化](#持久化)
@@ -16,13 +16,13 @@
 9. [Redis-性能测试](#redis-性能测试)
 10. [Redis-常见问题](#redis-常见问题)
 
-#### 系统环境
+## 系统环境
 - 系统：macOS
 - 处理器：2.6 GHz 六核Intel Core i7
 - 内存：16GB
 - 版本：15.0
 
-#### docker 安装
+## docker 安装
 redis.config
 ```
 # 60s 内有3个值变动，通过bgsave持久化
@@ -57,132 +57,113 @@ docker run -d --name redis-1 \
   redis redis-server /usr/local/etc/redis/redis.conf
 ```
 
-#### 常见数据类型
+## 数据类型
 
-常用数据类型
-
+常用数据类型  
 String（字符串），Hash（哈希），List（列表），Set（集合）、Zset（有序集合）
 
-新增数据类型
-
+新增数据类型  
 HyperLogLog（2.8 版新增）、GEO（3.2 版新增）、Stream（5.0 版新增）
 
-##### 常用数据类型
+### 常用数据类型
 
-1. String
+#### String  
+String 是最基本的 key-value 结构，key 是唯一标识，value 是具体的值，value其实不仅是字符串，也可以是数字（整数或浮点数），value 最多可以容纳的数据长度是 512MB  
+基本用法
+```shell
+# 设置一个键值对，以及过期时间
+set key value [NX|XX] [GET] [EX seconds|PX millise
+# 获取 key 对用 value
+get key
+```  
+应用场景  
 
-   String 是最基本的 key-value 结构，key 是唯一标识，value 是具体的值，value其实不仅是字符串，也可以是数字（整数或浮点数），value 最多可以容纳的数据长度是 512MB
-   
-   基本用法
-
-   ```shell
-   # 设置一个键值对，以及过期时间
-   set key value [NX|XX] [GET] [EX seconds|PX millise
-   # 获取 key 对用 value
-   get key
-   ```
-   
-   应用场景
-   
-   - 缓存对象
-
-      ```shell
-      SET user:1 '{"name":"xiaolin", "age":18}'
-      ```
-     
-   - 常规计数
-      ```shell
-      SET aritcle:readcount:1001 0
-      incr aritcle:readcount:1001
-      ```
-   - 分布式锁
-      ```shell
-      SET lock_key unique_value NX PX 10000
-      ```
-
-2. List
-
-   List(双向列表)列表是简单的字符串列表，按照插入顺序排序，可以从头部或尾部向 List 列表添加元素。
-
-   基本用法
+  - 缓存对象
 
    ```shell
-   # 向列表的头/尾部插入 n 个元素
-   LPUSH/RPUSH key value...
-   # 获取 列表 头/尾元素
-   LPOP/RPOP key
-   # 返回列表key中指定区间内的元素，区间以偏移量start和stop指定，从0开始
-   LRANGE key start stop
-   # 从key列表表头弹出一个元素，没有就阻塞timeout秒，如果timeout=0则一直阻塞
-   BLPOP/BRPOP key timeout
+   SET user:1 '{"name":"xiaolin", "age":18}'
    ```
-
-   应用场景
-
-   - 消息队列，生产者使用`LPUSH/RPUSH`往列表中插入消息，消费者使用`BRPOP/BLPOP`消费列表中的数据，保证了有序性，也确保了消费者阻塞式读取数据；生产者使用全局唯一ID确保不会重复消息处理；使用`BRPOPLPUSH`确保消息可靠
-
-3. Hash
-
-   Hash是一个键值对(key-value)，`value=[{field1, value1},{field2, value2},{fieldN, valueN}]`，比较适合存储对象
-
-   基本用法
-
+  - 常规计数
    ```shell
-   # 存储一个哈希表的键值
-   hset stu1 name wx age 12
-   # 返回哈希表key中field的数量
-   hlen stu1
-   # 返回所有的键值
-   hgetall stu1
+   SET aritcle:readcount:1001 0
+   incr aritcle:readcount:1001
    ```
-
-   应用场景
-
-   - 缓存对象，对于对象中某些频繁变化的属性可以用Hash类型来存储
-
-      ```shell
-      hset stu1 name wx age 12
-      ```
-
-4. Set
-
-   Set类型是一个无序并唯一的键值集合，它的存储顺序不会按照插入的先后顺序进行存储。
-
-   基本用法
-
+  - 分布式锁
    ```shell
-   # 往集合key中存入元素，元素存在则忽略，若key不存在则新建
-   sadd key member [member ...]
-   # 从集合key中删除元素
-   srem key member [member ...]
-   # 获取所有元素
-   smembers key
-   # 获取集合中key中的数量
-   scard key
-   
-   # 判断 member元素是否存在集合key中
-   sismember key member
-   
-   # 从集合key中随机选出count个元素，元素不从key中删除
-   srandmember key [count]
-   
-   # 从集合key中随机选出count个元素，元素从集合中删除
-   spop key [count]
-   
-   ## 集合 交集、并集、差集运算 ....
-   # 交集
-   SINTER key [key ...]
-   # 交集的结果保存在新的集合中
-   SINTERSTORE destination key [key ...]
-   # 并集
-   SUNION key [key ...]
-   SUNIONSTORE destination key [key ...]
-   # 差集
-   SDIFF key [key ...]
-   SDIFFSTORE destination key [key ...]
+   SET lock_key unique_value NX PX 10000
    ```
 
-   应用场景
+#### List  
+List(双向列表)列表是简单的字符串列表，按照插入顺序排序，可以从头部或尾部向 List 列表添加元素。  
+基本用法
+
+```shell
+# 向列表的头/尾部插入 n 个元素
+LPUSH/RPUSH key value...
+# 获取 列表 头/尾元素
+LPOP/RPOP key
+# 返回列表key中指定区间内的元素，区间以偏移量start和stop指定，从0开始
+LRANGE key start stop
+# 从key列表表头弹出一个元素，没有就阻塞timeout秒，如果timeout=0则一直阻塞
+BLPOP/BRPOP key timeout
+```
+应用场景
+  - 消息队列  
+  生产者使用`LPUSH/RPUSH`往列表中插入消息，消费者使用`BRPOP/BLPOP`消费列表中的数据，保证了有序性，也确保了消费者阻塞式读取数据；生产者使用全局唯一ID确保不会重复消息处理；使用`BRPOPLPUSH`确保消息可靠
+
+#### Hash  
+Hash是一个键值对(key-value)，`value=[{field1, value1},{field2, value2},{fieldN, valueN}]`，比较适合存储对象  
+基本用法
+```shell
+# 存储一个哈希表的键值
+hset stu1 name wx age 12
+# 返回哈希表key中field的数量
+hlen stu1
+# 返回所有的键值
+hgetall stu1
+```
+应用场景
+  - 缓存对象，对于对象中某些频繁变化的属性可以用Hash类型来存储
+  ```shell
+  hset stu1 name wx age 12
+  ```
+
+#### Set  
+Set类型是一个无序并唯一的键值集合，它的存储顺序不会按照插入的先后顺序进行存储。  
+基本用法
+```shell
+# 往集合key中存入元素，元素存在则忽略，若key不存在则新建
+sadd key member [member ...]
+# 从集合key中删除元素
+srem key member [member ...]
+# 获取所有元素
+smembers key
+# 获取集合中key中的数量
+scard key
+
+# 判断 member元素是否存在集合key中
+sismember key member
+
+# 从集合key中随机选出count个元素，元素不从key中删除
+srandmember key [count]
+
+# 从集合key中随机选出count个元素，元素从集合中删除
+spop key [count]
+
+## 集合 交集、并集、差集运算 ....
+# 交集
+SINTER key [key ...]
+# 交集的结果保存在新的集合中
+SINTERSTORE destination key [key ...]
+# 并集
+SUNION key [key ...]
+SUNIONSTORE destination key [key ...]
+# 差集
+SDIFF key [key ...]
+SDIFFSTORE destination key [key ...]
+```
+
+应用场景
 
    - 文章点赞，key是文章id，value是用户id
    
@@ -210,36 +191,32 @@ HyperLogLog（2.8 版新增）、GEO（3.2 版新增）、Stream（5.0 版新增
    SRANDMEMBER lockly 3
    ```
 
-5. Zset
-
-   Zset是有序集合，相比Set类型多了一个排序属性score（分数），对于有序集合ZSet来说，每个存储元素相当于两个值组成的，一个是有序集合的元素值，一个是排序值
-
-   基本用法
-
-   ```shell
-   # 往有序集合key中加⼊带分值元素
-   ZADD key score member [[score member]...]
-   # 往有序集合key中删除元素
-   ZREM key member [member...]
-   # 返回有序集合key中元素member的分值
-   ZSCORE key member
-   # 返回有序集合key中元素个数
-   ZCARD key
-   # 为有序集合key中元素member的分值加上increment
-   ZINCRBY key increment member
-   # 正序获取有序集合key从start下标到stop下标的元素
-   ZRANGE key start stop [WITHSCORES]
-   # 倒序获取有序集合key从start下标到stop下标的元素
-   ZREVRANGE key start stop [WITHSCORES]
-   # 返回有序集合中指定分数区间内的成员，分数由低到⾼排序。
-   ZRANGEBYSCORE key min max [WITHSCORES] [LIMIT offset count]
-   # 返回指定成员区间内的成员，按字典正序排列, 分数必须相同。
-   ZRANGEBYLEX key min max [LIMIT offset count]
-   # 返回指定成员区间内的成员，按字典倒序排列, 分数必须相同
-   ZREVRANGEBYLEX key max min [LIMIT offset count]
-   ```
-   
-   应用场景
+#### Zset  
+Zset是有序集合，相比Set类型多了一个排序属性score（分数），对于有序集合ZSet来说，每个存储元素相当于两个值组成的，一个是有序集合的元素值，一个是排序值  
+基本用法
+```shell
+# 往有序集合key中加⼊带分值元素
+ZADD key score member [[score member]...]
+# 往有序集合key中删除元素
+ZREM key member [member...]
+# 返回有序集合key中元素member的分值
+ZSCORE key member
+# 返回有序集合key中元素个数
+ZCARD key
+# 为有序集合key中元素member的分值加上increment
+ZINCRBY key increment member
+# 正序获取有序集合key从start下标到stop下标的元素
+ZRANGE key start stop [WITHSCORES]
+# 倒序获取有序集合key从start下标到stop下标的元素
+ZREVRANGE key start stop [WITHSCORES]
+# 返回有序集合中指定分数区间内的成员，分数由低到⾼排序。
+ZRANGEBYSCORE key min max [WITHSCORES] [LIMIT offset count]
+# 返回指定成员区间内的成员，按字典正序排列, 分数必须相同。
+ZRANGEBYLEX key min max [LIMIT offset count]
+# 返回指定成员区间内的成员，按字典倒序排列, 分数必须相同
+ZREVRANGEBYLEX key max min [LIMIT offset count]
+```
+应用场景
    
    - 排行榜，文章浏览量排行榜
    
@@ -252,37 +229,33 @@ HyperLogLog（2.8 版新增）、GEO（3.2 版新增）、Stream（5.0 版新增
    ZREVRANGE article:book 0 2 withscores
    ```
 
-6. BitMap
+#### BitMap  
+BitMap，位图是⼀串连续的⼆进制数组（0和1），可以通过偏移量（offset）定位元素。BitMap通过最⼩的单位bit
+来进⾏ 0|1 的设置，表示某个元素的值或者状态，时间复杂度为O(1)。  
+基本用法
+```shell
+# 设置值，其中value只能是 0 和 1
+SETBIT key offset value
+# 获取值
+GETBIT key offset
+# 获取指定范围内值为 1 的个数
+# start 和 end 以字节为单位
+BITCOUNT key start end
 
-   BitMap，位图是⼀串连续的⼆进制数组（0和1），可以通过偏移量（offset）定位元素。BitMap通过最⼩的单位bit
-   来进⾏ 0|1 的设置，表示某个元素的值或者状态，时间复杂度为O(1)。
-
-   基本用法
-
-   ```shell
-   # 设置值，其中value只能是 0 和 1
-   SETBIT key offset value
-   # 获取值
-   GETBIT key offset
-   # 获取指定范围内值为 1 的个数
-   # start 和 end 以字节为单位
-   BITCOUNT key start end
-   
-   # BitMap间的运算
-   # operations 位移操作符，枚举值
-   AND 与运算 &
-   OR 或运算 |
-   XOR 异或 ^
-   NOT 取反 ~
-   # result 计算的结果，会存储在该key中
-   # key1 … keyn 参与运算的key，可以有多个，空格分割，not运算只能⼀个key
-   # 当 BITOP 处理不同⻓度的字符串时，较短的那个字符串所缺少的部分会被看作 0。返回值是保存到 destkey
-   BITOP [operations] [result] [key1] [keyn…]
-   # 返回指定key中第⼀次出现指定value(0/1)的位置
-   BITPOS [key] [value]
-   ```
-   
-   应用场景
+# BitMap间的运算
+# operations 位移操作符，枚举值
+AND 与运算 &
+OR 或运算 |
+XOR 异或 ^
+NOT 取反 ~
+# result 计算的结果，会存储在该key中
+# key1 … keyn 参与运算的key，可以有多个，空格分割，not运算只能⼀个key
+# 当 BITOP 处理不同⻓度的字符串时，较短的那个字符串所缺少的部分会被看作 0。返回值是保存到 destkey
+BITOP [operations] [result] [key1] [keyn…]
+# 返回指定key中第⼀次出现指定value(0/1)的位置
+BITPOS [key] [value]
+```
+应用场景
 
    - 签到统计，在签到打卡的场景中，我们只用记录签到(1)或未签到(0)
 
@@ -295,24 +268,21 @@ HyperLogLog（2.8 版新增）、GEO（3.2 版新增）、Stream（5.0 版新增
    BITCOUNT uid:a:202411
    ```
 
-7. Geo
+#### Geo  
+Geo 主要用于存储地理位置信息，并对存储的信息进行操作  
+基本用法
+```shell
+# 存储指定的地理空间位置，可以将⼀个或多个经度(longitude)、纬度(latitude)、位置名称(member)添加
+GEOADD key longitude latitude member [longitude latitude member ...]
+# 从给定的 key ⾥返回所有指定名称(member)的位置（经度和纬度），不存在的返回 nil。
+GEOPOS key member [member ...]
+# 返回两个给定位置之间的距离。
+GEODIST key member1 member2 [m|km|ft|mi]
+# 根据⽤户给定的经纬度坐标来获取指定范围内的地理位置集合。
+GEORADIUS key longitude latitude radius m|km|ft|mi [WITHCOORD] [WITHDIST] [WITHHASH
+```
 
-   Geo 主要用于存储地理位置信息，并对存储的信息进行操作
-
-   基本用法
-
-   ```shell
-   # 存储指定的地理空间位置，可以将⼀个或多个经度(longitude)、纬度(latitude)、位置名称(member)添加
-   GEOADD key longitude latitude member [longitude latitude member ...]
-   # 从给定的 key ⾥返回所有指定名称(member)的位置（经度和纬度），不存在的返回 nil。
-   GEOPOS key member [member ...]
-   # 返回两个给定位置之间的距离。
-   GEODIST key member1 member2 [m|km|ft|mi]
-   # 根据⽤户给定的经纬度坐标来获取指定范围内的地理位置集合。
-   GEORADIUS key longitude latitude radius m|km|ft|mi [WITHCOORD] [WITHDIST] [WITHHASH
-   ```
-   
-   应用场景
+应用场景
 
    - 滴滴叫车
 
@@ -323,23 +293,21 @@ HyperLogLog（2.8 版新增）、GEO（3.2 版新增）、Stream（5.0 版新增
    GEORADIUS cars:locations 116.054579 39.030453 5 km ASC COUNT 10
    ```
 
-8. Stream
+#### Stream  
+Stream 实现了消息队列，支持消息的持久化、支持自动生成全局唯一ID、支持ack确认消息模式、支持消费组模式等  
+基本用法
 
-   Stream 实现了消息队列，支持消息的持久化、支持自动生成全局唯一ID、支持ack确认消息模式、支持消费组模式等
+```
+XADD - 添加消息到末尾
+XTRIM - 对流进行修剪，限制长度
+XDEL - 删除消息
+XLEN - 获取流包含的元素数量，即消息长度
+XRANGE - 获取消息列表，会自动过滤已经删除的消息
+XREVRANGE - 反向获取消息列表，ID 从大到小
+XREAD - 以阻塞或非阻塞方式获取消息列表
+```
 
-   基本用法
-
-   ```
-   XADD - 添加消息到末尾
-   XTRIM - 对流进行修剪，限制长度
-   XDEL - 删除消息
-   XLEN - 获取流包含的元素数量，即消息长度
-   XRANGE - 获取消息列表，会自动过滤已经删除的消息
-   XREVRANGE - 反向获取消息列表，ID 从大到小
-   XREAD - 以阻塞或非阻塞方式获取消息列表
-   ```
-
-   应用场景
+应用场景
 
    - 消息队列
 
@@ -347,78 +315,60 @@ HyperLogLog（2.8 版新增）、GEO（3.2 版新增）、Stream（5.0 版新增
    // todo
    ```
 
-##### 常用数据结构
-
+### 常用数据结构  
 Redis有简单动态字符串、双向链表、压缩列表、哈希表、跳表和整数数组，他们和常用数据类型的对应关系如下
 ![images-2024-12-02-10-47-29](../images/images-2024-12-02-10-47-29.png)
 
-1. 键和值用什么结构组织？
-
-   Redis使用了哈希表来保存所有键值对，哈希表就是一个数组，数组的每个元素称为一个哈希桶，在每一个哈希桶中保存了键值对数据
-   ![images-2024-12-06-15-47-29](../images/images-2024-12-06-15-47-29.png)
+#### 键和值用什么结构组织？  
+Redis使用了哈希表来保存所有键值对，哈希表就是一个数组，数组的每个元素称为一个哈希桶，在每一个哈希桶中保存了键值对数据
+![images-2024-12-06-15-47-29](../images/images-2024-12-06-15-47-29.png)
    
-   哈希表保存了所有的键值对，也称为全局哈希表。哈希表的最大好处很明显，就是可以用 O(1) 的时间复杂度来快速查找到键值对——我们只需要计算键的哈希值，就可以知道它所对应的哈希桶位置，然后就可以访问相应的 entry 元素
-   
-   哈希表的 O(1) 复杂度和快速查找键值对，也带来一个问题，**哈希冲突会带来操作阻塞**
+哈希表保存了所有的键值对，也称为全局哈希表。哈希表的最大好处很明显，就是可以用 O(1) 的时间复杂度来快速查找到键值对——我们只需要计算键的哈希值，就可以知道它所对应的哈希桶位置，然后就可以访问相应的 entry 元素  
+哈希表的 O(1) 复杂度和快速查找键值对，也带来一个问题，**哈希冲突会带来操作阻塞**
 
-2. 哈希表操作变慢
+#### 哈希表操作变慢  
+哈希冲突是不可避免的问题，Redis解决哈希冲突的方式是链式哈希，同一个哈希桶中的多个元素用一个链表来保存，它们之间依次用指针连接。
+![images-2024-12-06-16-47-29](../images/images-2024-12-06-16-47-29.png)
 
-   哈希冲突是不可避免的问题，Redis解决哈希冲突的方式是链式哈希，同一个哈希桶中的多个元素用一个链表来保存，它们之间依次用指针连接。
-   ![images-2024-12-06-16-47-29](../images/images-2024-12-06-16-47-29.png)
+这里会引发另一个问题，哈希冲突链上的元素只能通过指针逐一查找再操作。如果哈希表里写入的数据越来越多，哈希冲突可能也会越来越多，这就会导致某些哈希冲突链过长，进而导致这个链上的元素查找耗时长，效率降低  
+Redis的解决措施是渐进式rehash，Redis 默认使用了两个全局哈希表：哈希表 1 和哈希表 2，默认使用哈希表 1，当开始进行rehash时，分为三步：
+- 给哈希表 2 分配更大的空间，例如是当前哈希表 1 大小的两倍；
+- 把哈希表 1 中的数据重新映射并拷贝到哈希表 2 中；
+- 释放哈希表 1 的空间。
 
-   这里会引发另一个问题，哈希冲突链上的元素只能通过指针逐一查找再操作。如果哈希表里写入的数据越来越多，哈希冲突可能也会越来越多，这就会导致某些哈希冲突链过长，进而导致这个链上的元素查找耗时长，效率降低
+为了避免第二步拷贝全部数据造成阻塞，每处理一个请求时，从哈希表 1 中的第一个索引位置开始，顺带着将这个索引位置上的所有 entries 拷贝到哈希表 2 中。
+避免了一次性大量拷贝的开销，分摊到了多次处理请求的过程中，避免了耗时操作，保证了数据的快速访问
 
-   Redis的解决措施是渐进式rehash，Redis 默认使用了两个全局哈希表：哈希表 1 和哈希表 2，默认使用哈希表 1，当开始进行rehash时，分为三步：
+#### 压缩列表  
+压缩列表实际上类似于一个数组，数组中的每一个元素都对应保存一个数据。和数组不同的是，压缩列表在表头有三个字段 zlbytes、zltail 和 zllen，分别表示列表长度、列表尾的偏移量和列表中的 entry 个数；压缩列表在表尾还有一个 zlend，表示列表结束。
 
-   - 给哈希表 2 分配更大的空间，例如是当前哈希表 1 大小的两倍；
-   - 把哈希表 1 中的数据重新映射并拷贝到哈希表 2 中；
-   - 释放哈希表 1 的空间。
+![images-2024-12-06-17-40-29](../images/images-2024-12-06-17-40-29.png)
 
-   为了避免第二步拷贝全部数据造成阻塞，每处理一个请求时，从哈希表 1 中的第一个索引位置开始，顺带着将这个索引位置上的所有 entries 拷贝到哈希表 2 中。
-   避免了一次性大量拷贝的开销，分摊到了多次处理请求的过程中，避免了耗时操作，保证了数据的快速访问
+如果我们要查找定位第一个元素和最后一个元素，可以通过表头三个字段的长度直接定位，复杂度是 O(1)。而查找其他元素时，就没有这么高效了，只能逐个查找，此时的复杂度就是 O(N)
 
-3. 压缩列表
-
-   压缩列表实际上类似于一个数组，数组中的每一个元素都对应保存一个数据。和数组不同的是，压缩列表在表头有三个字段 zlbytes、zltail 和 zllen，分别表示列表长度、列表尾的偏移量和列表中的 entry 个数；压缩列表在表尾还有一个 zlend，表示列表结束。
-   
-   ![images-2024-12-06-17-40-29](../images/images-2024-12-06-17-40-29.png)
-
-   如果我们要查找定位第一个元素和最后一个元素，可以通过表头三个字段的长度直接定位，复杂度是 O(1)。而查找其他元素时，就没有这么高效了，只能逐个查找，此时的复杂度就是 O(N)
-
-4. 跳表
-
-   有序链表只能逐一查找元素，导致操作起来非常缓慢，于是就出现了跳表。具体来说，跳表在链表的基础上，增加了多级索引，通过索引位置的几个跳转，实现数据的快速定位
-   ![images-2024-12-06-17-41-29](../images/images-2024-12-06-17-41-29.png)
+#### 跳表  
+有序链表只能逐一查找元素，导致操作起来非常缓慢，于是就出现了跳表。具体来说，跳表在链表的基础上，增加了多级索引，通过索引位置的几个跳转，实现数据的快速定位
+![images-2024-12-06-17-41-29](../images/images-2024-12-06-17-41-29.png)
 
 不同数据结构查找的时间复杂度
 ![images-2024-12-06-17-43-29](../images/images-2024-12-06-17-43-29.png)
 
-#### 持久化
-
+## 持久化
 三种持久化方式
-
 - **快照方式**（RDB, Redis DataBase）将某一个时刻的内存数据，以二进制的方式写入磁盘；
 - **文件追加方式**（AOF, Append Only File），记录所有的操作命令，并以文本的形式追加到文件中；
 - **混合持久化方式**，Redis 4.0 之后新增的方式，混合持久化是结合了 RDB 和 AOF 的优点，在写入的时候，先把当前的数据以 RDB 的形式写入文件的开头，再将后续的操作命令以 AOF 的格式存入文件，这样既能保证 Redis 重启时的速度，又能减低数据丢失的风险。
 
-##### RDB 持久化
-RDB（Redis DataBase）是将某一个时刻的内存快照（Snapshot），以二进制的方式写入磁盘的过程。
-
+### RDB 持久化
+RDB（Redis DataBase）是将某一个时刻的内存快照（Snapshot），以二进制的方式写入磁盘的过程。  
 RDB 的持久化触发方式有两类：一类是手动触发，另一类是自动触发。
-
-1. 手动触发
-
+1. 手动触发  
    手动触发持久化的操作有两个： `save` 和 `bgsave` ，它们主要区别体现在：是否阻塞 Redis 主线程的执行
-   
     - `save`：在客户端执行`save`命令，就会触发持久化，会是Redis进入阻塞状态，慎用
     - `bgsave`：bgsave(background save)，通过fork()一个子进程来执行持久化，只有当创建子进程时会有**短暂阻塞**。
-
-2. 自动触发
-
-   `save m n` 是指在 m 秒内，如果有 n 个键发生改变，满足设置的触发条件，自动执行一次 `bgsave` 命令
-   
+2. 自动触发  
+   `save m n` 是指在 m 秒内，如果有 n 个键发生改变，满足设置的触发条件，自动执行一次 `bgsave` 命令  
    `flushall` 命令用于清空Redis数据库，并把RDB文件清空
-
 3. 设置配置，在`redis-cli`操作
    ```shell
    master-slave-config get dbfilename
@@ -426,85 +376,60 @@ RDB 的持久化触发方式有两类：一类是手动触发，另一类是自�
    master-slave-config set dir "" # 设置持久化路径
    master-slave-config set save "" # 禁止持久化
    ```
-   
-4. RDB 优缺点
-
-   优点
-   
+4. 优点  
    - RDB 的内容为二进制的数据，占用内存小，更紧凑，适合作为备份文件
-   - RDB 备份使用的是子进程进行数据持久化至磁盘，不会影响主进程
-
-   缺点
-
+   - RDB 备份使用的是子进程进行数据持久化至磁盘，不会影响主进程  
+   
+5. 缺点
    - 只能保存某个时间间隔的数据，中途Redis服务意外终止，数据会丢失
    - fork()子进程会将数据持久化至磁盘，数据集很大，持久化CPU性能不佳，会影响到主进程
 
-##### AOF 持久化
-
-AOF（Append Only File）中文是附加到文件，顾名思义 AOF 可以把 Redis 每个键值对操作都记录到文件（appendonly.aof）中。
-
+### AOF 持久化
+AOF（Append Only File）中文是附加到文件，顾名思义 AOF 可以把 Redis 每个键值对操作都记录到文件（appendonly.aof）中。  
 1. 持久化配置
-
    ```shell
    master-slave-config get appendonly #查询 AOF是否启动
    master-slave-config set appendonly yes # 启动 AOF
    master-slave-config set appendonly no # 关闭 AOF
    ```
-
    `redis.conf`中的配置文件中设置`appendonly yes`即可开启AOF
 
-2. 触发持久化
-
-   触发条件有两种自动触发和手动触发
-
-   - 自动触发，满足AOF设置的策略触发，`config get appendonly`，获取AOF策略，主要策略
-
+2. 触发持久化  
+   触发条件有两种自动触发和手动触发  
+   - 自动触发，满足AOF设置的策略触发，`config get appendonly`，获取AOF策略，主要策略  
      - always：每条Redis操作命令都会写入磁盘，最多丢失一条数据
      - everysec：每秒钟写入一次磁盘，最多丢失一秒的数据
      - no：不设置写入磁盘的规则，根据当前操作系统来决定何时写入磁盘，Linux默认30s写入一次数据至磁盘
-
    - 手动触发，在客户端执行`bgrewriteaof`命令，可以触发文件重写
 
-3. 文件重写
-
-   AOF 是通过记录 `Redis` 的**执行命令**来持久化（保存）数据的，不断对`Redis`执行命令`AOF`文件会越来越多，这样不仅增加了服务器的存储压力，也会造成 `Redis` 重启速度变慢，为了解决这个问题 Redis 提供了 AOF 重写的功能。主线程 fork 出后台的 `bgrewriteaof` 子进程,bgrewriteaof 子进程就可以在不影响主线程的情况下，逐一把拷贝的数据写成操作，记入重写日志
-
+3. 文件重写  
+   AOF 是通过记录 `Redis` 的**执行命令**来持久化（保存）数据的，不断对`Redis`执行命令`AOF`文件会越来越多，这样不仅增加了服务器的存储压力，也会造成 `Redis` 重启速度变慢，为了解决这个问题 Redis 提供了 AOF 重写的功能。主线程 fork 出后台的 `bgrewriteaof` 子进程,bgrewriteaof 子进程就可以在不影响主线程的情况下，逐一把拷贝的数据写成操作，记入重写日志  
    - `auto-aof-rewrite-min-size`允许 AOF 重写的最小文件容量，默认是 64mb
    - `auto-aof-rewrite-percentage`AOF 文件重写的大小比例，默认值是 100，表示 100%
 
-4. 优缺点
-
-   优点
-
+4. 优点
    - AOF 持久化保存的数据更加完整，最多只会丢失 1s 钟的数据
    - AOF 采用的是命令追加的写入方式，所以不会出现文件损坏的问题
-   - AOF 持久化文件，非常容易理解和解析，它是把所有 Redis 键值操作命令，即使使用`flushall`也可以恢复数据
+   - AOF 持久化文件，非常容易理解和解析，它是把所有 Redis 键值操作命令，即使使用`flushall`也可以恢复数据  
    
-   缺点
-
+5. 缺点
    - 对于相同的数据集来说，AOF 文件要大于 RDB 文件
    - 在 Redis 负载比较高的情况下，RDB 比 AOF 性能更好
 
-##### RDB & AOF 混合持久化
+### RDB & AOF 混合持久化
 
-`config set aof-use-rdb-preamble yes`开启混合持久化
+`config set aof-use-rdb-preamble yes`开启混合持久化  
+当开启了混合持久化时,在 AOF 重写日志时,`fork`出来的重写子进程会先将与主线程共享的内存数据以 RDB 方式写入到 AOF 文件，然后主线程处理的操作命令会被记录在重写缓冲区里，重写缓冲区里的增量命令会以 AOF 方式写入到 AOF 文件，写入完成后通知主进程将新的含有 RDB 格式和 AOF 格式的 AOF 文件替换旧的的 AOF 文件。  
+优点
+   - 开头为 RDB 的格式，使得 Redis 可以更快的启动，同时结合 AOF 的优点，有减低了大量数据丢失的风险  
 
-当开启了混合持久化时,在 AOF 重写日志时,`fork`出来的重写子进程会先将与主线程共享的内存数据以 RDB 方式写入到 AOF 文件，然后主线程处理的操作命令会被记录在重写缓冲区里，重写缓冲区里的增量命令会以 AOF 方式写入到 AOF 文件，写入完成后通知主进程将新的含有 RDB 格式和 AOF 格式的 AOF 文件替换旧的的 AOF 文件。
-
-优缺点
-
-   优点
-
-   - 开头为 RDB 的格式，使得 Redis 可以更快的启动，同时结合 AOF 的优点，有减低了大量数据丢失的风险
-
-   缺点
-
+缺点
    - AOF 文件中添加了 RDB 格式的内容，使得 AOF 文件的可读性变得很差
    - 不能兼容redis4.0之前的版本
 
-#### Redis 过期策略
+## Redis 过期策略
 
-##### 设置过期时间
+### 设置过期时间
 
 1. 使用`pexpire`
 
@@ -523,34 +448,28 @@ AOF（Append Only File）中文是附加到文件，顾名思义 AOF 可以把 R
 
    `persist key` 可以移除键值的过期时间
 
-##### 持久化中的过期键
-
-RDB，从内存状态持久化成 RDB（文件）的时候，会对 key 进行过期检查，过期的键不会被保存到新的 RDB 文件中，因此 Redis 中的过期键不会对生成新 RDB 文件产生任何影响
-
+### 持久化中的过期键
+RDB，从内存状态持久化成 RDB（文件）的时候，会对 key 进行过期检查，过期的键不会被保存到新的 RDB 文件中，因此 Redis 中的过期键不会对生成新 RDB 文件产生任何影响  
 AOF，如果数据库某个过期键还没被删除，那么 AOF 文件会保留此过期键，当此过期键被删除后，Redis 会向 AOF 文件追加一条 DEL 命令来显式地删除该键值。重写之后不会被保存
 
-##### 过期策略
+### 过期策略
 
-Redis 会删除已过期的键值，以此来减少 Redis 的空间占用，但因为 Redis 本身是单线的，如果因为删除操作而影响主业务的执行就得不偿失了，为此 Redis 需要制定多个（过期）删除策略来保证糟糕的事情不会发生
-
+Redis 会删除已过期的键值，以此来减少 Redis 的空间占用，但因为 Redis 本身是单线的，如果因为删除操作而影响主业务的执行就得不偿失了，为此 Redis 需要制定多个（过期）删除策略来保证糟糕的事情不会发生  
 常见的过期策略：定时删除、惰性删除、定期删除
 
-- 定时删除
-
+- 定时删除  
    在设置键值过期时间时，创建一个定时事件，当过期时间到达时，由事件处理器自动执行键的删除操作
 
    - 优点：保证内存可以被尽快释放
    - 缺点：在Redis高负载的时，会造成Redis服务器卡顿
 
-- 惰性删除
-
+- 惰性删除  
   不主动删除过期键，每次从数据库获取键值时判断是否过期，如果过期则删除键值，并返回 null
 
   - 优点：每次访问时，才会判断过期键，只使用了很少的系统资源
   - 缺点：系统占用空间删除不及时，导致空间利用率降低，造成了一定的空间浪费
 
-- 定期删除
-
+- 定期删除  
    每隔一段时间检查一次数据库，随机删除一些过期键，配置`hz 10`
 
   - 优点：通过限制删除操作的时长和频率，来减少操作对Redis主业务的影响，同时也能删除一部份过期的数据
@@ -559,12 +478,11 @@ Redis 会删除已过期的键值，以此来减少 Redis 的空间占用，但�
 总结：Redis 使用的是惰性删除加定期删除的过期策略
 
 
-#### Redis 内存淘汰
+## Redis 内存淘汰
 
 当 Redis 运行内存已经超过 Redis 设置的最大内存之后，将采用什么策略来删除符合条件的键值对，以此来保障 Redis 高效的运行，其中64位操作系统的没有对内存大小做限制，`config get maxmemory`查看内存限制。
 
-##### 内存淘汰策略
-
+### 内存淘汰策略
 1. 内存淘汰策略分类
 
    - `noeviction`：不淘汰任何数据，当内存不足时，新增操作会报错，Redis 默认内存淘汰策略；
@@ -585,13 +503,9 @@ Redis 会删除已过期的键值，以此来减少 Redis 的空间占用，但�
 
 ##### 内存淘汰算法
 
-1. LRU算法
+1. LRU算法，LRU 全称是 Least Recently Used 译为最近最少使用，是一种常用的页面置换算法，选择最近最久未使用的页面予以淘汰
 
-   LRU 全称是 Least Recently Used 译为最近最少使用，是一种常用的页面置换算法，选择最近最久未使用的页面予以淘汰
-
-2. LFU算法
-
-   LFU 全称是 Least Frequently Used 翻译为最不常用的，最不常用的算法是根据总访问次数来淘汰数据的，它的核心思想是“如果数据过去被访问多次，那么将来被访问的频率也更高”
+2. LFU算法，LFU 全称是 Least Frequently Used 翻译为最不常用的，最不常用的算法是根据总访问次数来淘汰数据的，它的核心思想是“如果数据过去被访问多次，那么将来被访问的频率也更高”
 
 ##### 主从同步
 
@@ -616,14 +530,12 @@ Redis 会删除已过期的键值，以此来减少 Redis 的空间占用，但�
      OK
      ```
 
-3. 功能测试
-
+3. 功能测试  
    首先我们先在主服务器上执行保存数据操作，再去从服务器查询，从服务器只能查询数据
 
    ![images_2024-11-26_10-21-02](../images/images-2024-11-26-10-21-02.png)
 
-4. 主从数据同步
-
+4. 主从数据同步  
    新的从服务器连接时，为了保障多个数据库的一致性，主服务器会执行一次 bgsave 命令生成一个 RDB 文件，然后再以 Socket 的方式发送给从服务器，从
 服务器收到 RDB 文件之后再把所有的数据加载到自己的程序中，就完成了一次全量的数据同步。
 
@@ -631,46 +543,41 @@ Redis 会删除已过期的键值，以此来减少 Redis 的空间占用，但�
 
    主从数据同步，还会出现：主从库间网络断了怎么办？主从同步的细节。主从之间的`buffer`等等，暂且作为遗留问题 `todo`
 
-5. 查询服务器角色
-
+5. 查询服务器角色  
    使用 `role` 命令，来查询当前服务器的主从角色信息
 
    ![images-2024-11-26-11-25-08](../images/images-2024-11-26-11-25-08.png)
 
    关闭主从同步，使用 `replicaof no one` 命令来停止从服务器的复制
 
-#### Redis 哨兵
+## Redis 哨兵
 
-##### 哨兵是做什么的
+### 哨兵是做什么的
 
 在Redis的主从架构中，由于主从模式时读写分离的，如果主节点挂了，那么没有主节点来服务客户端的写操作，也没有主节点给从节点进行数据同步。
 哨兵的作用是实现主从节点故障转移。它会检测主节点是否存活，如果发现主节点挂了，他就会选举一个从节点切换位主节点。
 
-##### 哨兵的工作机制
+### 哨兵的工作机制
 
 哨兵是一个运行在特殊模式下的Redis进程，所以它是一个节点。哨兵主要负责三件事：监控、选主、通知，哨兵是以集群的方式存在的，降低误差，最好是技术个哨兵(3,5,7)
 
-1. 监控主节点，判断主节点是否故障
-
+1. 监控主节点，判断主节点是否故障  
    哨兵会每隔1秒给所有主从节点发送PING命令，当主从节点收到PING命令后，会发送一个响应给哨兵，这样判断出聪是否在正常运行。
 
    ![images-2024-11-28-10-49-44](../images/images-2024-11-28-10-49-44.png)
    
    主从节点没有在规定的时间(`down-after-milliseconds`)内响应哨兵，哨兵就会将其标记位**主观下线(SDOWN)**，单个哨兵的判断可能会误判，通过多个哨兵节点一起判断，就可以降低误判的情况。
-   当一个哨兵判读主节点为**主观下线**，就会向其他哨兵发起判断主节点是否下线的命令，当其他哨兵认同主观下线的数量超过设置的`quorum`时，主节点就会判定为**客观下线**。
-
+   当一个哨兵判读主节点为**主观下线**，就会向其他哨兵发起判断主节点是否下线的命令，当其他哨兵认同主观下线的数量超过设置的`quorum`时，主节点就会判定为**客观下线**。  
    哨兵判断主节点客观下线后，哨兵要在多个从节点中，选出一个从节点来做新的主节点。
 
-2. 选举哨兵进行主从故障转移
-
+2. 选举哨兵进行主从故障转移  
    主从故障转移是由一个被选举为“领导者”（Leader）的哨兵负责执行的。这种机制通过哨兵间的选举流程确定具体负责执行故障转移的哨兵。当哨兵检测到主节点进入客观下线（ODOWN）状态后，任何哨兵都可以成为“候选人”。候选人会自动投票给自己，同时发起投票请求，争取其他哨兵的支持。每个哨兵只能在每轮选举中投票一次。
    当满足：
    - 候选人获得超过半数哨兵实例（N/2 + 1）的支持票
    
    就可以成为主从故障转移的领导者
 
-##### 哨兵主从故障迁移
-
+### 哨兵主从故障迁移
 1. 选择新的主节点，新主节点满足以下条件：
 
    - 节点必须是在线状态
@@ -680,21 +587,17 @@ Redis 会删除已过期的键值，以此来减少 Redis 的空间占用，但�
 
    将选定的从节点提升为新的主节点，Sentinel 会向该从节点发送 `SLAVEOF NO ONE` 命令，使其成为主节点
 
-2. 重新配置其他从节点
-
+2. 重新配置其他从节点  
    将剩余的从节点重新配置为从属于新的主节点，Sentinel 会向这些从节点发送 `SLAVEOF <new-master-ip> <new-master-port>` 命令
 
-3. 将旧主节点重新配置为从节点
-
+3. 将旧主节点重新配置为从节点  
    如果故障的旧主节点重新上线，Sentinel 会将其重新配置为新主节点的从节点，
    Sentinel 向旧主节点发送 `SLAVEOF <new-master-ip> <new-master-port>` 命令
 
-4. 通知客户端更新主节点地址
-
+4. 通知客户端更新主节点地址  
    Sentinel 将通过 Pub/Sub 通知机制通知客户端新的主节点地址`todo`
 
-5. 故障转移流程图
-
+5. 故障转移流程图  
    ```
    Step 1: 主节点发生故障
             ↓
@@ -715,7 +618,7 @@ Redis 会删除已过期的键值，以此来减少 Redis 的空间占用，但�
 
 在故障迁移时，有数据写入，该怎么办？
 
-##### 实操
+### 实操
 
 1. 项目目录
 
@@ -826,64 +729,56 @@ Redis 会删除已过期的键值，以此来减少 Redis 的空间占用，但�
    1:X 28 Nov 2024 14:57:23.806 # -sdown slave 172.30.1.2:6379 172.30.1.2 6379 @ mymaster 172.30.1.3 6379 # 原来的主服务器172.30.1.2（现在作为从服务器）再次被认为是可用的（不再sdown）
    ```
 
-#### Redis 集群
+## Redis 集群
 
 [Redis scales horizontally with a deployment topology called Redis Cluster.](https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/)
 
 Redis采用集群的主要目的是为了解决单机性能和容量的限制问题，增加了高可用性
 
-##### 集群模式
+### 集群模式
+#### Redis Cluster  
+Redis 自带的原生集群模式，支持数据分片  
+特点：
 
-1. Redis Cluster
+- 分片算法：由客户端决定分片规则，通常采用一致性哈希
+- 灵活性搞：客户端完全掌控分片逻辑
+- 无高可用支持：需要客户端额外管理主从关系和故障管理
 
-   Redis 自带的原生集群模式，支持数据分片
+使用场景：
+- 数据分布策略需要高度定制化
+- 不需要复杂的高可用管理，或已有外部的高可用方案
 
-   特点：
+数据分片(data sharding)  
+`Redis`集群不使用一致哈希，而是使用一种不同形式的分片，其中每个键在概念上都是我们称之为哈希槽的一部分。
+`Redis`集群中有16384个哈希槽，为了计算给定键的哈希槽，我们只需将键进行CRC16哈希然后对16384取模。
+`Redis`集群中的每个节点负责哈希槽的一个子集，例如，有一个有3个节点(A,B,C)的集群，其中：
 
-   - 分片算法：由客户端决定分片规则，通常采用一致性哈希
-   - 灵活性搞：客户端完全掌控分片逻辑
-   - 无高可用支持：需要客户端额外管理主从关系和故障管理
-   
-   使用场景：
-
-   - 数据分布策略需要高度定制化
-   - 不需要复杂的高可用管理，或已有外部的高可用方案
-
-   数据分片(data sharding)
-
-   `Redis`集群不使用一致哈希，而是使用一种不同形式的分片，其中每个键在概念上都是我们称之为哈希槽的一部分。
-   `Redis`集群中有16384个哈希槽，为了计算给定键的哈希槽，我们只需将键进行CRC16哈希然后对16384取模。
-   `Redis`集群中的每个节点负责哈希槽的一个子集，例如，有一个有3个节点(A,B,C)的集群，其中：
-
-   - 节点A包含0 ~ 5500个哈希槽
-   - 节点B包含从5501到11000的哈希槽
-   - 节点C包含从11001到16383的哈希槽
+- 节点A包含0 ~ 5500个哈希槽
+- 节点B包含从5501到11000的哈希槽
+- 节点C包含从11001到16383的哈希槽
 
 
-   集群端口，集群的每一个节点需要打开两个端口，一个用于为客户端提供服务的端口，另一个为集群的总线端口，默认情况下，集群总线端口是10000+客户端端口。可以通过`cluster-port`设置
+集群端口，集群的每一个节点需要打开两个端口，一个用于为客户端提供服务的端口，另一个为集群的总线端口，默认情况下，集群总线端口是10000+客户端端口。可以通过`cluster-port`设置
 
 
-   Redis Cluster 主从模型，为了保证节点发送故障后节点通信是保持可用，Redis Cluster 使用主从的模式，每一个主节点都有多个副节点。
-   三个主节点三个从节点(A,B,C,A1,B1,C1)，如果主节点B发送故障，集群将提升节点B1为新的主节点继续正常运行，如果B和B1同时发生故障，则`Redis Cluster`将无法继续运行。
+Redis Cluster 主从模型，为了保证节点发送故障后节点通信是保持可用，Redis Cluster 使用主从的模式，每一个主节点都有多个副节点。
+三个主节点三个从节点(A,B,C,A1,B1,C1)，如果主节点B发送故障，集群将提升节点B1为新的主节点继续正常运行，如果B和B1同时发生故障，则`Redis Cluster`将无法继续运行。
 
-   Redis集群不能保证强一致性，集群可能会丢失客户端的确认写入
+Redis集群不能保证强一致性，集群可能会丢失客户端的确认写入
 
-2. Codis
+#### Codis
 
-   Codis 是由国人开发的开源Redis分布式代理解决方案，旨在帮助用户管理多个Redis实例，**不在更新**
+Codis 是由国人开发的开源Redis分布式代理解决方案，旨在帮助用户管理多个Redis实例，**不在更新**  
+特点：
+- 隐藏了分片逻辑，客户端只需要连接Proxy，不需要感知底层的分布式结构
+- 支持横向扩展，多个Proxy可共同分担流量
+- 支持高可用，Proxy故障时，客户端可以切换到其他Proxy
 
-   特点：
+使用场景：
+- 数据规模大
+- 请求并发量高
 
-   - 隐藏了分片逻辑，客户端只需要连接Proxy，不需要感知底层的分布式结构
-   - 支持横向扩展，多个Proxy可共同分担流量
-   - 支持高可用，Proxy故障时，客户端可以切换到其他Proxy
-
-   使用场景：
-
-   - 数据规模大
-   - 请求并发量高
-
-Redis Cluster 与 Codis 的对比
+#### Redis Cluster 与 Codis 的对比
 
 | 特性     | Redis Cluster           | Codis                      |
 |--------|-------------------------|----------------------------|
@@ -894,7 +789,7 @@ Redis Cluster 与 Codis 的对比
 | 使用复杂度  | 相对简单，原生功能               | 相对复杂，需要运维 ZooKeeper/Etcd	  |
 | 场景适用性  | 新系统开发，支持Redis Cluster协议 | 适合老系统改造，无需更改业务代码           |
 
-##### Cluster 实操
+### Cluster 实操
 
 1. 集群目录
 
@@ -940,8 +835,7 @@ Redis Cluster 与 Codis 的对比
    - `cluster-node-timeout 5000` 设置 Redis 集群节点间的超时时间
    - `cluster-require-full-coverage yes` 默认yes，某主从节点都挂掉了，整个集群都无法提供服务
 
-3. [docker-compose.yaml](./cluster/docker-compose.yaml)
-
+3. [docker-compose.yaml](./cluster/docker-compose.yaml)  
    这次实操，是在一个服务器上启动了 6 个节点，并且在同一主机使用docker部署，直接使用的是主机网络，避免出现网络问题
 
 4. 创建集群
@@ -1041,10 +935,8 @@ Redis Cluster 与 Codis 的对比
    192.168.3.222:7002>
    ```
    
-6. 对集群重新分片
-
-   详细文章请查阅[Redis官方文档](https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/)
-
+6. 对集群重新分片  
+   详细文章请查阅[Redis官方文档](https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/)  
    重新分片可以自动执行，无需以交互方式手动输入参数
    `redis-cli --cluster reshard <host>:<port> --cluster-from <node-id> --cluster-to <node-id> --cluster-slots <number of slots> --cluster-yes`
 
@@ -1054,7 +946,7 @@ Redis Cluster 与 Codis 的对比
    - `--cluster-slots <number of slots>` 指定要移动的哈希槽数量，这个值必须在1到16384之间
    - `--cluster-yes` 自动确认所有提示，这使得命令可以在没有用户交互的情况下完成整个重新分片过程
 
-#### Redis 性能测试
+## Redis 性能测试
 
 对Redis进行性能测试，评估Redis缓存能不能顶主系统的吞吐量，对Redis的性能进行测试，有两种测试方式：
 
@@ -1173,17 +1065,16 @@ avg       min       p50       p95       p99       max
 | 99 百分位延迟 (p99) | 1.135 ms       | 0.407 ms        |
 | 最大延迟 (max)     | 8.031 ms       | 0.863 ms        |
 
-#### Redis 常见问题
+## Redis 常见问题
 
-##### 缓存中的数据和数据库不一致
+### 缓存中的数据和数据库不一致
 
 数据的一致性
-
    a. 缓存中有数据，那么，缓存的数据值需要和数据库中的值相同
    b. 缓存中本身没有数据，那么，数据库中的值必须是最新值
 
-解决措施：
-1. 先删除缓存，再更新数据库
+解决措施：  
+1. 先删除缓存，再更新数据库  
    可能会出现的问题，假设线程 A 删除缓存值后，还没有来得及更新数据库（比如说有网络延迟），线程 B 就开始读取数据了，那么这个时候，线程 B 会发现缓存缺失，就只能去数据库读取。这会带来两个问题：
    a. 线程 B 读取到了旧值；
    b. 线程 B 是在缓存缺失的情况下读取的数据库，所以，它还会把旧值写入缓存，这可能会导致其他线程从缓存中读到旧值。
@@ -1192,7 +1083,7 @@ avg       min       p50       p95       p99       max
 
    在线程 A 更新完数据库值以后，我们可以让它先 sleep 一小段时间，再进行一次缓存删除操作。
 
-2. 先更新数据库值，再删除缓存值
+2. 先更新数据库值，再删除缓存值  
 
    可能会出现的问题，如果线程 A 删除了数据库中的值，但还没来得及删除缓存值，线程 B 就开始读取数据了，那么此时，线程 B 查询缓存时，发现缓存命中，就会直接从缓存中读取旧值。
    不过，在这种情况下，如果其他线程并发读缓存的请求不多，那么，就不会有很多请求读取到旧值。而且，线程 A 一般也会很快删除缓存值，这样一来，其他线程再次读取时，就会发生缓存缺失，进而从数据库中读取最新值。所以，这种情况对业务的影响较小。
@@ -1206,7 +1097,7 @@ avg       min       p50       p95       p99       max
 
 不过，当使用先更新数据库再删除缓存时，也有个地方需要注意，如果业务层要求必须读取一致的数据，那么，我们就需要在更新数据库时，先在 Redis 缓存客户端暂存并发读请求，等数据库更新完、缓存值删除后，再读取数据，从而保证数据一致性。
 
-##### 缓存雪崩
+### 缓存雪崩
 
 大量数据不在缓存中，大量请求发送到数据库层，导致数据库层的压力激增，出现原因：
 
@@ -1220,12 +1111,12 @@ avg       min       p50       p95       p99       max
    - 在业务系统中实现服务熔断或请求限流机制
    - 事前预防，构建可靠集群
 
-##### 缓存击穿
+### 缓存击穿
 
-热点数据请求，没有在缓存中进行处理
+热点数据请求，没有在缓存中进行处理  
 解决措施：超长过期时间，或者不设置过期时间
 
-##### 缓存穿透
+### 缓存穿透
 
 访问的数据既不在 Redis 缓存中，也不在数据库中，导致请求在访问缓存时，发生缓存缺失，再去访问数据库时，发现数据库中也没有要访问的数据
 出现的两种情况：
