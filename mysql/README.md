@@ -110,12 +110,10 @@ MyISAM存储引擎是基于较旧的ISAM存储引擎的扩展，具体参考[官
 
 ### 选择存储引擎
 
-1. 如果系统需要 事务支持、高并发写入、数据一致性（如银行、订单系统）
-
+1. 如果系统需要 事务支持、高并发写入、数据一致性（如银行、订单系统）  
    选择 InnoDB
 
-2. 如果系统以 读操作为主、不需要事务支持（如报表系统、数据统计）
-
+2. 如果系统以 读操作为主、不需要事务支持（如报表系统、数据统计）  
    选择 MyISAM
 
 ## 索引
@@ -223,7 +221,7 @@ B-Tree（Balanced Tree，平衡树）是一种自我平衡的树数据结构，�
 
 ## 数据库优化
 
-数据库优化，为了提高SQL的执行效率，更加快速的完成SQL运行，可以数据库层面和硬件层面两个方面进行优化。
+数据库优化，为了提高SQL的执行效率，更加快速的完成SQL运行，可以数据库层面和硬件层面两个方面进行优化。  
 硬件层面造成的瓶颈通常有：磁盘寻道、磁盘读写、CPU周期、内存带宽等等。这里主要是从数据库层进行优化，详情参看[官方文档](https://dev.mysql.com/doc/refman/8.0/en/optimize-overview.html)
 
 ### SQL执行过程
@@ -240,8 +238,7 @@ B-Tree（Balanced Tree，平衡树）是一种自我平衡的树数据结构，�
      - 优化阶段：基于查询成本的考虑，选择查询成本最小的执行计划
      - 执行阶段：根据执行计划执行SQL查询语句，从存储引擎读取记录
 
-2. SELECT执行顺序
-
+2. SELECT执行顺序  
    关键字顺序：
    ```sql
    SELECT ... FROM ... WHERE ... GROUP BY ... HAVING ... ORDER BY ...
@@ -265,7 +262,6 @@ B-Tree（Balanced Tree，平衡树）是一种自我平衡的树数据结构，�
    在SELECT语句执行这些步骤的时候，每个步骤都会产生一个虚拟表，然后将这个虚拟表传入下一个步骤中作为输入
 
 ### 优化数据库结构
-
 1. 在建数据表时，先预估数据表的容量，数据表存放的数据量较大，要对数据表进行[分区](#分区)
 2. 优化数据类型
    - 优先使用数字类型的做唯一ID
@@ -281,9 +277,7 @@ B-Tree（Balanced Tree，平衡树）是一种自我平衡的树数据结构，�
 6. [配置缓冲池](https://dev.mysql.com/doc/refman/8.0/en/innodb-performance-buffer-pool.html)
 
 ### 优化SQL
-
-优化SQL需要一个过程的优化和判断才能达到预期，
-
+优化SQL需要一个过程的优化和判断才能达到预期  
 1. 优化SQL语句(// 感觉现在整理的不够 todo)
 
    - 语句优化
@@ -323,7 +317,7 @@ B-Tree（Balanced Tree，平衡树）是一种自我平衡的树数据结构，�
       LOCK [=] {DEFAULT | NONE | SHARED | EXCLUSIVE}
    ```
 
-3. SQL分析，使用EXPLAIN优化查询，去分析SQL执行日志，日志字段含义解释如下
+3. SQL分析，使用EXPLAIN优化查询，去分析SQL执行日志，日志字段含义解释如下  
    - **id**: 查询的<font color='red'>唯一标识符</font>
      - 在单个简单查询中，通常这个值为1。在复杂查询中，如包含子查询、联合查询（UNION）或是多表连接的查询，id的值可以帮助你理解查询的执行顺序和结构
      - 相同的id值表示这些操作是在同一个级别执行的。例如，在JOIN操作中，参与相同JOIN的表会有相同的id值。
@@ -460,8 +454,7 @@ B-Tree（Balanced Tree，平衡树）是一种自我平衡的树数据结构，�
    - 幻读：事务之间的数据插入或删除导致查询结果不一致
 
 
-MySQL的隔离级别可以解决上述问题，支持四种隔离级别
-
+MySQL的隔离级别可以解决上述问题，支持四种隔离级别  
 1. 读未提交（Read Uncommitted）
 
    - 允许脏读、不可重复读和幻读
@@ -512,15 +505,13 @@ COMMIT;
 
 #### 什么是 MVCC
 
-MVCC（Multi-Version Concurrency Control，多版本并发控制），通过数据行的多个版本管理来实现数据库的并发控制，它的思想就是保存数据的历史版本
-
+MVCC（Multi-Version Concurrency Control，多版本并发控制），通过数据行的多个版本管理来实现数据库的并发控制，它的思想就是保存数据的历史版本  
 在并发读写数据库时，可以做到在读操作时不用阻塞写操作，写操作也不用阻塞读操作，提高了数据库并发读写的性能。同时还可以解决脏读，幻读，不可重复读等事务隔离问题，但不能解决更新丢失问题
 
 
 #### MVCC实现原理
 
-MVCC 的实现主要依赖于：隐藏字段、`undo log`、Read View。
-
+MVCC 的实现主要依赖于：隐藏字段、`undo log`、Read View。  
 在内部实现中，InnoDB 通过数据行的 DB_TRX_ID 和 Read View 来判断数据的可见性，如不可见，则通过数据行的 DB_ROLL_PTR 找到 undo log 中的历史版本。每个事务读到的数据版本可能是不一样的，在同一个事务中，用户只能看到该事务创建 Read View 之前已经提交的修改和该事务本身做的修改
 
 [原文](https://dev.mysql.com/doc/refman/8.0/en/innodb-multi-versioning.html)
@@ -550,8 +541,7 @@ CREATE TABLE users (
 
 ##### Read View
 
-Read View 记录了当前事务能看到的版本，这些版本的数据基于事务开始时的快照。
-
+Read View 记录了当前事务能看到的版本，这些版本的数据基于事务开始时的快照。  
 Read View的结构，Read View](https://github.com/facebook/mysql-8.0/blob/8.0/storage/innobase/include/read0types.h#L298)主要是用来做可见行判断，主要字段有
 
 - m_low_limit_id：目前出现过的最大的事务 ID+1，即下一个将被分配的事务 ID。大于等于这个 ID 的数据版本均不可见
@@ -634,12 +624,10 @@ Read View的结构，Read View](https://github.com/facebook/mysql-8.0/blob/8.0/s
 
 ##### MVCC➕Next-key-Lock 防止幻读
 
-1. 执行普通 select，此时会以 MVCC 快照读的方式读取数据
-   
+1. 执行普通 select，此时会以 MVCC 快照读的方式读取数据  
    RR 隔离级别只会在事务开启后的第一次查询生成 Read View ，并使用至事务提交。所以在生成 Read View 之后其它事务所做的更新、插入记录版本对当前事务并不可见，实现了可重复读和防止快照读下的 “幻读”
 
-2. 执行 select...for update/lock in share mode、insert、update、delete 等当前读
-
+2. 执行 select...for update/lock in share mode、insert、update、delete 等当前读  
    当前读读取的是最新的数据，并且会对读取到的数据加锁，防止其他事务修改或删除该数据。在执行 insert、update、delete 操作时，会以当前读的方式读取数据，并加锁，防止其它事务在查询范围内插入数据，从而实现防止幻读
 
 ## 分区
@@ -648,8 +636,7 @@ MySQL 8.0中的分区是将数据表按一定的规则划分成多个子表，�
 
 ### 分区类型
 
-1. [范围分区(RANGE Partitioning)](https://dev.mysql.com/doc/refman/8.0/en/partitioning-range.html)
-
+1. [范围分区(RANGE Partitioning)](https://dev.mysql.com/doc/refman/8.0/en/partitioning-range.html)  
    范围分区是根据列的值将数据分配到不同的分区中，每个分区包含的值范围是连续的。
    
    ```sql
@@ -695,8 +682,7 @@ MySQL 8.0中的分区是将数据表按一定的规则划分成多个子表，�
    );
    ```
 
-2. [列表分区(LIST Partitioning)](https://dev.mysql.com/doc/refman/8.0/en/partitioning-list.html)
-
+2. [列表分区(LIST Partitioning)](https://dev.mysql.com/doc/refman/8.0/en/partitioning-list.html)  
    列表分区在许多方面与范围分区相似，每个分区都必须明确定义。这两种分区类型之间的主要区别在于，在列表分区中，每个分区都是根据列值在一组值列表之一中的成员资格来定义和选择的，而不是在一组连续值范围之一中定义和选择的。这是通过使用其中 是列值或基于列值的表达式并返回整数值，然后通过定义每个分区来完成的。
    
    ```sql
@@ -722,8 +708,7 @@ MySQL 8.0中的分区是将数据表按一定的规则划分成多个子表，�
 
    这里我要吐槽一个点，列表分区的分区列，没有默认分区，[原文](https://dev.mysql.com/doc/refman/8.0/en/partitioning-list.html)Unlike the case with RANGE partitioning, there is no “catch-all” such as MAXVALUE; all expected values for the partitioning expression should be covered in PARTITION ... VALUES IN (...) clauses. An INSERT statement containing an unmatched partitioning column value fails with an error
 
-3. [哈希分区(HASH Partitioning)](https://dev.mysql.com/doc/refman/8.0/en/partitioning-hash.html)
-
+3. [哈希分区(HASH Partitioning)](https://dev.mysql.com/doc/refman/8.0/en/partitioning-hash.html)  
    使用HASH进行分区主要是为了确保数据在预定数量的分区中均匀分布。对于范围或列表分区，必须显式指定应该将给定的列值或列值集存储在哪个分区中；Hash分区通过对某个（或多个）列的值应用哈希算法，计算出一个哈希值，然后将这个哈希值映射到不同的分区。
 
    ```sql
@@ -755,8 +740,7 @@ MySQL 8.0中的分区是将数据表按一定的规则划分成多个子表，�
    PARTITION BY LINEAR HASH( YEAR(hired) ) PARTITIONS 4;
    ```
 
-4. [键分区(KEY Partitioning)](https://dev.mysql.com/doc/refman/8.0/en/partitioning-key.html)
-
+4. [键分区(KEY Partitioning)](https://dev.mysql.com/doc/refman/8.0/en/partitioning-key.html)  
    `Key Partitioning`是MySQL分区的一种方式，它基于指定列的哈希值来将数据分配到不同的分区。与`Hash Partitioning`类似，`Key Partitioning`也是通过计算某个或多个列的哈希值来决定数据应该放置在哪个分区，但与Hash分区不同的是，`Key Partitioning`使用的是MySQL内部的哈希函数，而不是用户定义的哈希函数
 
    ```sql
@@ -769,8 +753,7 @@ MySQL 8.0中的分区是将数据表按一定的规则划分成多个子表，�
    PARTITIONS 2;
    ```
 
-5. [复合分区(Composite Partitioning)](https://dev.mysql.com/doc/refman/8.0/en/partitioning-composite.html)
-
+5. [复合分区(Composite Partitioning)](https://dev.mysql.com/doc/refman/8.0/en/partitioning-composite.html)  
    复合分区是对分区表中的每个分区进行进一步划分，复合分区可以结合多种分区类型，例如，可以结合范围分区、列表分区、哈希分区等
 
    ```sql
@@ -898,11 +881,128 @@ MySQL 8.0中的分区是将数据表按一定的规则划分成多个子表，�
    - 在设计分区表时，应确保分区键与主键或唯一键结合使用，遵循这些约束。
    - 在创建分区表时，需要特别注意分区键的选择，因为它会影响性能以及表的数据分布。合理的选择分区键不仅能优化查询性能，还能避免与唯一键约束产生冲突。
 
-## 主从
+## 数据备份
 
+## 复制
+
+MySQL主从复制，主要是将数据存储在多个节点上，在主节点上进行读写，从节点进行读取，主节点和从节点之间通过主从同步进行数据同步，[原文链接](https://dev.mysql.com/doc/refman/8.0/en/replication.html)。
+
+![](../images/mysql/msyql_主从同步.png)
+
+主从模式主要解决的问题是：
+1. 数据备份：通过将数据复制到多个从节点，可以实现数据备份，提高数据的安全性。  
+2. 读写分离：通过将读操作分配到从节点，可以提高读取性能，减轻主节点的压力。
+3. 高可用性：通过将主节点和从节点分开部署，可以提高系统的可用性，即使主节点出现故障，也可以通过从节点继续提供服务。
+
+### 配置
+
+#### 配置文件
+
+每个服务器都必须配置一个唯一的服务器 ID，您可以使用 server_id系统变量指定该 ID。此服务器 ID 用于标识复制拓扑中的各个服务器，并且必须是 $1\sim2^{32}-1$ 之间的正整数。MySQL 8.0 中的默认 server_id值为 1，可以在my.cnf文件中配置，也可以在启动时使用--server-id选项指定。
+
+#### 配置复制用户
+
+```sql
+CREATE USER 'repl'@'%' IDENTIFIED BY '123456';
+GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%';
+FLUSH PRIVILEGES;
+SHOW MASTER STATUS;
+
+-- 查看主节点状态
+SHOW MASTER STATUS\G
+-- 查看从节点状态
+SHOW SLAVE STATUS\G
+```
+
+#### 在副本服务器上配置
+
+```sql
+CHANGE MASTER TO
+MASTER_HOST='192.168.3.222',
+MASTER_USER='repl',
+MASTER_PORT=3306,
+MASTER_PASSWORD='123456',
+MASTER_AUTO_POSITION=1;
+START SLAVE;
+```
+
+在MySQL客户端执行`SHOW SLAVE STATUS\G`查看从库是否连接成功，如果不成功，查看日志，并重置同步
+```sql
+-- 查看详细错误信息
+SHOW SLAVE STATUS\G
+
+-- 如果需要重置同步
+STOP SLAVE;
+RESET SLAVE;
+
+CHANGE MASTER TO
+MASTER_HOST='192.168.3.222',
+MASTER_USER='repl',
+MASTER_PORT=3306,
+MASTER_PASSWORD='123456',
+MASTER_AUTO_POSITION=1;
+
+-- 启动从库
+START SLAVE;
+```
+
+### 实现
+
+- Docker 部署，详情见[docker-compose.yaml](./master-slave/docker-compose.yaml)
+- 启动`mysql_1`，`docker-compose up -d mysql_1`，查看主节点信息：`docker exec -it mysql_1 mysql -uroot -p123456 -e "SHOW MASTER STATUS\G"`
+   ![](../images/mysql/images-2024-12-25-15-47-01.png)
+
+- 启动`mysql_2`，`docker-compose up -d mysql_2`，连接从节点，设置主节点信息
+   ```sql
+   CHANGE MASTER TO
+   MASTER_HOST='192.168.3.222',
+   MASTER_USER='repl',
+   MASTER_PORT=3306,
+   MASTER_PASSWORD='123456',
+   MASTER_AUTO_POSITION=1;
+
+   START SLAVE;
+
+   ```
+
+- 查看从库状态，`docker exec -it mysql_2 mysql -uroot -p123456 -e "SHOW SLAVE STATUS\G"`，主从复制正常的标志如下：
+
+   - Slave_IO_Running 和 Slave_SQL_Running 都是 Yes
+   - Seconds_Behind_Master 接近 0
+   - 主从库数据一致
+   - 没有复制错误
+   - 网络连接稳定
+
+
+- 测试主从复制
+
+   ```sql
+   -- 在主库执行
+   CREATE DATABASE test_db;
+   USE test_db;
+   CREATE TABLE users (
+      id INT PRIMARY KEY,
+      name VARCHAR(50)
+   );
+   INSERT INTO users VALUES (1, '测试用户');
+
+   -- 在从库执行，由于从库被设置为只读，所以无法插入数据，但是使用超级管理员，还是可以修改数据，
+   USE test_db;
+   SELECT * FROM users;  -- 应该能看到主库插入的数据
+   ```
+
+### 注意事项
+
+MySQL主从复制，对比Redis的主从，MySQL更加容易出错，一下说明常见的错误，详情参见[官方文档](https://dev.mysql.com/doc/refman/8.0/en/replication-notes.html)
+
+1. 主库和从库的server_id不能相同
+2. 主库和从库的binlog格式必须相同
+3. 主库和从库的binlog日志文件和位置必须相同
+4. 主库和从库的binlog日志文件和位置必须相同
 
 ## 集群
 
 ### 分库分表
+
 
 
