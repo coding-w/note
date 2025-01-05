@@ -1,0 +1,61 @@
+services:
+  # 管理节点
+  ndb_mgmd:
+    image: container-registry.oracle.com/mysql/community-cluster:8.0
+    container_name: ndb_mgmd
+    command: ndb_mgmd --initial -f /var/lib/mysql-cluster/config.ini
+    volumes:
+      - ./config.ini:/var/lib/mysql-cluster/config.ini # 配置文件挂载
+      - ./ndb_mgmd:/var/lib/mysql-cluster
+    networks:
+      cluster_network:
+        ipv4_address: 192.168.0.2
+
+  # 数据节点 1
+  ndb1:
+    image: container-registry.oracle.com/mysql/community-cluster:8.0
+    container_name: ndb1
+    command: ndbd --initial
+    depends_on:
+      - ndb_mgmd # 数据节点依赖于管理节点
+    volumes:
+      - ./ndb1:/usr/local/mysql/data # 数据挂载目录
+    networks:
+      cluster_network:
+        ipv4_address: 192.168.0.3
+
+  # 数据节点 2
+  ndb2:
+    image: container-registry.oracle.com/mysql/community-cluster:8.0
+    container_name: ndb2
+    command: ndbd --initial
+    depends_on:
+      - ndb_mgmd
+    volumes:
+      - ./ndb2:/usr/local/mysql/data
+    networks:
+      cluster_network:
+        ipv4_address: 192.168.0.4
+
+  # SQL 节点
+  sql_node:
+    image: container-registry.oracle.com/mysql/community-cluster:8.0
+    container_name: mysqld
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword # 设置 root 密码
+      MYSQL_DATABASE: testdb # 初始化数据库
+      MYSQL_USER: user # 自定义用户
+      MYSQL_PASSWORD: password # 用户密码
+    ports:
+      - "3306:3306" # 暴露 MySQL 默认端口
+    depends_on:
+      - ndb_mgmd
+    networks:
+      cluster_network:
+        ipv4_address: 192.168.0.5
+networks:
+  cluster_network:
+    driver: bridge # 使用 bridge 网络
+    ipam:
+      config:
+        - subnet: 192.168.0.0/16 # 定义子网，分配静态 IP
