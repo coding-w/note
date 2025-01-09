@@ -34,3 +34,12 @@ go.work.sum
 *.pem
 
 uploads/
+
+### IntelliJ IDEA ###
+*.iws
+*.iml
+*.ipr
+target/
+
+### Mac OS ###
+.DS_Store
