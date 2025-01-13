@@ -1,0 +1,13 @@
+spring:
+  kafka:
+    bootstrap-servers:
+      - kafka1:9093
+      - kafka2:9094
+      - kafka3:9095
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      group-id: test

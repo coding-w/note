@@ -8,9 +8,11 @@
 3. [Golang 反射](./go-reflect/README.md)
 4. [GORM](./gorm/READEM.md)
 5. [GRPC](./grpc/README.md)
-6. [RPC](./rpc/README.md)
-7. [WebSocket](./websocket/README.md)
-8. [Redis](./redis/README.md)
+6. [Kafka](./Kafka/README.md)
+7. [MySQL](./mysql/README.md)
+8. [RPC](./rpc/README.md)
+9. [WebSocket](./websocket/README.md)
+10. [Redis](./redis/README.md)
 
 
 
