@@ -4,26 +4,39 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 
-
-public class Consumer {
+public class ConsumerSeek {
     public static void main(String[] args) throws Exception {
 
         // 0. 配置
         Properties props =  getProperties();
         // 1. 创建消费者
         KafkaConsumer<String, String> kafkaConsumer = new KafkaConsumer<>(props);
-        // 2. 定义主题 first
+        // 2. 定义主题 test
         List<String> topics = new ArrayList<>();
         topics.add("test");
         kafkaConsumer.subscribe(topics);
+        // 保证分区分配方案
+        Set<TopicPartition> assignment = new HashSet<>();
+        while (assignment.isEmpty()) {
+            kafkaConsumer.poll(Duration.ofSeconds(1));
+            // 获取消费者分区分配信息（有了分区分配信息才能开始消费）
+            assignment = kafkaConsumer.assignment();
+        }
+        // 指定位置消费
+        for (TopicPartition topicPartition : assignment) {
+            kafkaConsumer.seek(topicPartition, 1000);
+        }
         // 3. 消费数据
         while (true) {
             ConsumerRecords<String, String> consumerRecords = kafkaConsumer.poll(Duration.ofSeconds(1));
@@ -40,8 +53,6 @@ public class Consumer {
         // 反序列化
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        // 分区分配策略
-        props.put(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, "org.apache.kafka.clients.consumer.RangeAssignor");
         // 消费者组名
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "test");
         return props;

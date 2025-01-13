@@ -27,13 +27,12 @@ public class MyProducer {
         KafkaProducer<String, String> kafkaProducer = new KafkaProducer<>(props);
 
         // 发送数据
-        for (int i = 0; i < 1500; i++) {
-            kafkaProducer.send(new ProducerRecord<>("test","Hello" + i), new Callback() {
+        for (int i = 0; i < 500; i++) {
+            kafkaProducer.send(new ProducerRecord<>("test2","Hello" + i), new Callback() {
                 @Override
                 public void onCompletion(RecordMetadata recordMetadata, Exception e) {
                     if (e == null) {
-                        System.out.println("Successfully sent message");
-                        System.out.println(recordMetadata);
+                        System.out.println("topic: " + recordMetadata.topic() + ", partition: " + recordMetadata.partition());
                     }
                 }
             });

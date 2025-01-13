@@ -147,7 +147,7 @@ Kafka默认1个副本，生产环境一般配置2个
 Kafka分区中的所有副本统称为AR(Assigned Repllicas)  
 AR = isr + osr
 
-isr: 表示和Leader保持同步的Follower集合。如果Follower长时间未向Leader发送通信请求或同步数据，则该Follower将被踢出isr
+isr: 表示和Leader保持同步的Follower集合。如果Follower长时间未向Leader发送通信请求或同步数据（**30s**），则该Follower将被踢出isr
 
 osr: 表示Follower与Leader副本同步时，延迟过多的副本
 
@@ -165,8 +165,20 @@ Kafka集群日志，默认7天后被清除，清楚策略有两种：删除、�
 
 1. Kafka本身是分布式集群，可以采用分区技术，并行度高
 2. 读数据采用稀疏索引，可以快速定位要消费的数据
-3. 顺序写磁盘，Kafka的producer生产数据，要写入到log文件中，写的过程是一只追加到文件末端，为顺序写。
+3. 顺序写磁盘，Kafka的producer生产数据，要写入到log文件中，写的过程是一只追加到文件末端，为顺序写
+4. 零拷贝和页缓存(操作系统缓存)
 
+#### 数据积压，提高Kafka吞吐量
+
+1. 增加分区，增加消费者个数
+2. 提高生产者吞吐量，修改参数配置  
+   - `batch.size`批次大小，默认16k
+   - `linger.ms`等待时间，默认0ms
+   - `compression.type`压缩snappy
+   - `RecordAccumulator`缓冲区大小，默认32m
+3. 提高消费者吞吐量，修改参数配置  
+   - `fetch.max.bytes` 增加消费者一次拉取的消息条数，默认50m
+   - `max.poll.records` 增加一次poll拉取数据返回消息的最大条数
 
 
 ### Consumer
@@ -199,6 +211,15 @@ kafka-console-consumer.sh --bootstrap-server kafka2:9094 --topic first --from-be
 - 消费者组内每个消费者负责消费不同分区的数据，一个分区只能由一个组内消费者消费
 - 消费者组之间互不影响。所有消费者都属于某个消费者组，即**消费者组是逻辑上的一个订阅者**
 
+#### 消费消息流程
+1. 配置消费者配置，集群地址、key和value的反序列化、组名
+2. 消费者订阅主题
+3. [消费者初始化](#消费者组初始化流程)，分区分配
+4. 消费者拉取数据（poll循环）
+5. 消费数据（消息处理）
+6. 提交偏移量，分为自动提交，和手动提交，手动提交有分为同步提交和异步提交
+7. 消费者故障和再平衡
+
 ##### 消费者组初始化流程
 使用`coordinator`辅助实现消费者组的初始化和分区，每一个broker都有`coordinator`。选择一个`coordinator`作为集群的leader
 
@@ -217,3 +238,63 @@ kafka-console-consumer.sh --bootstrap-server kafka2:9094 --topic first --from-be
 3. 抓去数据成功回调，进过序列化到达消费者
 
 ##### 消费者分区分配
+
+一个consumer group中有多个consumer组成，一个topic有多个partition组成，哪一个consumer来消费哪个partition的数据  
+Kafka有四种主流分区分配策略：Range、RoundRobin、Sticky、CooperativeSticky  
+
+通过`partition.assignment.strategy`配置分区分配策略，默认策略是Range+CooperativeSticky
+
+###### Range分区
+对于每一个topic都是“均分”，将分区均分给消费者，余的分区分给靠前的消费者
+
+例如：8个分区，分给三个消费者，前两个消费者分的3个分区，最后一个消费者分两个分区
+
+缺点：在**45s**内停掉消费者A，随机由一个分区会直接承担消费者A的分区数据。从而造成数据倾斜  
+
+这里的45s是指分区`coordinator`的心跳机制，会重新分配
+
+###### RoundRobin
+RoundRobin 针对所有Topic去轮训分区策略，把所有partition和所有的consumer都列出来，然后按照 hashcode 进行排序，最后通过轮询算法来分配  
+
+例如：8个分区，分给三个消费者A、B、C  
+A:0、3、6  
+B:1、4、7  
+C:2、5  
+
+停掉A分区之后，45秒内分区产生的数据，消费者A负责的分区会被轮询的分给B、C
+
+###### Sticky 分区
+粘性分区定义：分配的结果带有“粘性的”，即在执行一次新的分配之前，考虑上一次分配的结果，尽量少的调整分配的变动。**将分区随机均匀的分配给所有的消费者**。
+
+#### offset
+offset 保存着消费者消费数据的位移，从0.9版本开支，consumer将offset保存在Kafka一个内置的topic中，该topic为_consumer_offsets中，在此之前的版本，是存储在Zookeeper中。保存在Kafka中的目的是降低I/O...  
+
+_consumer_offsets主题里面采用key和value的方法存储数据
+key是group.id+topic+分区号，value是当前offset的值  
+
+修改配置文件`consumer.properties`，添加`exclude.internal.topics=false`，默认是true，表示不能消费系统主题。查看事例如下
+```shell
+# 创建一个新的topic
+kafka-topics.sh --bootstrap.server kafka1:9093 --create --topic test_offset --partitions 2 --replication-factor 2
+# 启动生产者,并生产数据
+kafka-console-producer.sh --topic test_offset --bootstrap.server kafka1:9093
+# 启动消费者消费数据
+kafka-console-consumer.sh --bootstrap.server kafka1:9093 --topic test_offset --group test
+
+# 查看消费者消费主题
+kafka-console-consumer.sh --bootstrap.server kafka1:9093 --topic _consumer_offsets --consumer.config consumer.properties --formatter "kafka.coordinator.group.GroupMetadataManager\$OffsetMessageFormatter" --from beginning
+```
+
+[自动保存](./src/main/java/com/coding/w/consumer/ConsumerAutoOffset.java)和[手动保存](./src/main/java/com/coding/w/consumer/ConsumerOffset.java)
+
+#### 消费者消费数据模式
+`auto.offset.reset=earliest|latest|none`去指定消费者从什么位置开始消费  
+- earliest: 自动将偏移量重置为最早的偏移量 --from-beginning
+- latest: 自动将偏移量重置为最新偏移量（默认）
+- none: 如果未找到消费者组的先前偏移量，则向消费者抛出异常
+- 任意指定offset位移开始消费
+
+
+
+
+

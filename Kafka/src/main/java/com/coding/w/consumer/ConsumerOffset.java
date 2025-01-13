@@ -4,47 +4,49 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
-/**
- * @author wangxiang
- * @description
- * @create 2025/1/9 17:29
- */
-public class ConsumerPartition {
-    public static void main(String[] args) {
+
+public class ConsumerOffset {
+    public static void main(String[] args) throws Exception {
+
         // 0. 配置
-        Properties props = getProperties();
+        Properties props =  getProperties();
         // 1. 创建消费者
         KafkaConsumer<String, String> kafkaConsumer = new KafkaConsumer<>(props);
-        // 2.订阅主题和对应分区
-        ArrayList<TopicPartition> topicPartitions = new ArrayList<>();
-        topicPartitions.add(new TopicPartition("first", 0));
-        kafkaConsumer.assign(topicPartitions);
-        // 3. 消费
+        // 2. 定义主题 first
+        List<String> topics = new ArrayList<>();
+        topics.add("test");
+        kafkaConsumer.subscribe(topics);
+        // 3. 消费数据
         while (true) {
-            ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofSeconds(1));
-            for (ConsumerRecord<String, String> record : records) {
-                System.out.println(record);
+            ConsumerRecords<String, String> consumerRecords = kafkaConsumer.poll(Duration.ofSeconds(1));
+            for (ConsumerRecord<String, String> item : consumerRecords) {
+                System.out.println(item);
             }
+            // 一般用异步提交
+            kafkaConsumer.commitSync();
         }
     }
+
     private static Properties getProperties() {
         Properties props = new Properties();
         // 连接
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka1:9093,kafka2:9094,kafka3:9095");
-        // 设置分区分配策略
-        props.put(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, "org.apache.kafka.clients.consumer.RoundRobinAssignor");
+        // auto offset
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         // 反序列化
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         // 消费者组名
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test2");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test");
         return props;
     }
+
+
 }

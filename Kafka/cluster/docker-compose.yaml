@@ -64,6 +64,7 @@ services:
       - KAFKA_BROKER_ID=1   # Kafka节点ID
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper1:2181,zookeeper2:2182,zookeeper3:2183 # zookeeper集群地址
       - TZ=Asia/Shanghai
+      - KAFKA_HEAP_OPTS=-Xms512m -Xmx2g # 设置最小和最大内存
     ports:
       - "9093:9093"
     volumes:
@@ -88,6 +89,7 @@ services:
       - KAFKA_BROKER_ID=2
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper1:2181,zookeeper2:2182,zookeeper3:2183
       - TZ=Asia/Shanghai
+      - KAFKA_HEAP_OPTS=-Xms512m -Xmx2g # 设置最小和最大内存
     ports:
       - "9094:9094"
     volumes:
@@ -112,6 +114,7 @@ services:
       - KAFKA_BROKER_ID=3
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper1:2181,zookeeper2:2182,zookeeper3:2183
       - TZ=Asia/Shanghai
+      - KAFKA_HEAP_OPTS=-Xms512m -Xmx2g # 设置最小和最大内存
     ports:
       - "9095:9095"
     volumes:
