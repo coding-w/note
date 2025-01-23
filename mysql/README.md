@@ -280,12 +280,10 @@ B-Tree（Balanced Tree，平衡树）是一种自我平衡的树数据结构，�
 优化SQL需要一个过程的优化和判断才能达到预期  
 1. 优化SQL语句(// 感觉现在整理的不够 todo)
 
-   - 语句优化
-     - 避免使用`select *`进行查询
-     - 
+   - 避免使用`select *`进行查询
    - 索引优化，建立合适索引，在查询时保证索引生效
    - 连接优化，小表连接大表，连接条件尽可能的缩小表的大小
-
+   
 2. 建立合适索引，甄别正确的列做二级索引和二级联合索引，合理使用覆盖索引，避免[索引失效](#索引失效)，MySQL创建索引
 
    ```sql
@@ -499,7 +497,8 @@ COMMIT;
 
 ### MVCC
 
-在MySQL中，默认的隔离级别是可重复读，可以解决脏读和不可重复读的问题，但不能解决幻读问题。如果想要解决幻读问题，就需要采用串行化的方式，也就是将隔离级别提升到最高，但这样一来就会大幅降低数据库的事务并发能力。
+在MySQL中，默认的隔离级别是可重复读，可以解决脏读和不可重复读的问题，但不能解决幻读问题。如果想要解决幻读问题，就需要采用串行化的方式，也就是将隔离级别提升到最高，但这样一来就会大幅降低数据库的事务并发能力。  
+主要解决了在高并发环境下的数据库读写冲突问题，它允许事务处理更加高效，同时提高了数据库的整体性能和可靠性
 
 #### 什么是快照读和当前读？
 
@@ -547,7 +546,7 @@ CREATE TABLE users (
 ##### Read View
 
 Read View 记录了当前事务能看到的版本，这些版本的数据基于事务开始时的快照。  
-Read View的结构，Read View](https://github.com/facebook/mysql-8.0/blob/8.0/storage/innobase/include/read0types.h#L298)主要是用来做可见行判断，主要字段有
+Read View的结构，[Read View](https://github.com/facebook/mysql-8.0/blob/8.0/storage/innobase/include/read0types.h#L298)主要是用来做可见行判断，主要字段有
 
 - m_low_limit_id：目前出现过的最大的事务 ID+1，即下一个将被分配的事务 ID。大于等于这个 ID 的数据版本均不可见
 - m_up_limit_id：活跃事务列表 m_ids 中最小的事务 ID，如果 m_ids 为空，则 m_up_limit_id 为 m_low_limit_id。小于这个 ID 的数据版本均可见
@@ -669,7 +668,7 @@ MySQL 8.0中的分区是将数据表按一定的规则划分成多个子表，�
    ALTER TABLE employees ADD PARTITION (PARTITION p4 VALUES LESS THAN (26));
    -- 删除分区
    ALTER TABLE employees DROP PARTITION p4;
-
+   
    CREATE TABLE employees (
       id INT NOT NULL,
       fname VARCHAR(30),
@@ -965,9 +964,9 @@ START SLAVE;
    MASTER_PORT=3306,
    MASTER_PASSWORD='123456',
    MASTER_AUTO_POSITION=1;
-
+   
    START SLAVE;
-
+   
    ```
 
 - 查看从库状态，`docker exec -it mysql_2 mysql -uroot -p123456 -e "SHOW SLAVE STATUS\G"`，主从复制正常的标志如下：
@@ -990,7 +989,7 @@ START SLAVE;
       name VARCHAR(50)
    );
    INSERT INTO users VALUES (1, '测试用户');
-
+   
    -- 在从库执行，由于从库被设置为只读，所以无法插入数据，但是使用超级管理员，还是可以修改数据，
    USE test_db;
    SELECT * FROM users;  -- 应该能看到主库插入的数据
