@@ -162,6 +162,17 @@ git branch -vv
 ```
 在实际开发中，创建项目新分支，一般是在**代码托管平台上操作**的
 
+分支命名也需要规范，实际遵循公司规定
+
+| 分支类型  | 命名格式                     | 示例                               | 描述           |
+|-------|--------------------------|----------------------------------|--------------|
+| 主分支   | `main` / `master`        | 主分支，线上稳定版                        |
+| 功能分支  | `feature/feature-name`   | `feature/user-authentication`    | 用于新功能开发      |
+| 修复分支  | `bugfix/bug-name`        | `bugfix/login-error`             | 用于修复问题       |
+| 发布分支  | `release/version-number` | `release/v1.2.0`                 | 用于版本发布       |
+| 热修复分支 | `hotfix/hotfix-name`     | `hotfix/critical-security-patch` | 用于紧急修复生产环境问题 |
+| 测试分支  | `test/test-name`         | `test/integration-tests`         | 用于专门的测试工作    |
+
 ##### 切换分支
 ```shell
 ## 切换分支
@@ -270,5 +281,45 @@ git push origin --force-with-lease
 ## 不会删除历史，而是创建一个新的提交来撤销目标版本之后的更改
 git revert <目标版本号>
 ```
+
+## 其他
+
+##### 统计特定时间范围内的提交次数
+```shell
+git log --since="2025-01-01" --until="2025-03-01" --pretty=oneline | wc -l
+```
+
+`--since="2025-01-01"`：指定开始时间。
+`--until="2025-02-01"`：指定结束时间。
+`--pretty=oneline`：将每个提交显示为一行。
+`wc -l`：统计提交的行数（即提交的次数）。
+
+##### 统计特定时间范围内的新增或删除的代码行数
+```shell
+git log --since="2025-01-01" --until="2025-03-01" --numstat
+```
+
+##### 统计不同类别的提交次数
+```shell
+git log --since="2025-01-01" --until="2025-03-01" --pretty=format:"%s" | grep -E "^(feat|fix|docs|chore|style|refactor|test)" | sort | uniq -c
+```
+
+`--pretty=format:"%s"`：只输出提交的标题（即提交信息）。
+`grep -E "^(feat|fix|docs|chore|style|refactor|test)"`：通过正则表达式筛选出特定类别的提交（根据常见规范，这里列出了feat, fix, docs等，可以根据需要添加更多类别）。
+`sort`：对提交类别进行排序。
+`uniq -c`：统计每种类别出现的次数。
+
+##### 按类别统计并显示每种类别的提交次数
+```shell
+git log --since="2025-01-01" --until="2025-03-01" --pretty=format:"%s" | \
+  grep -Eo "^(feat|fix|docs|chore|style|refactor|test)" | \
+  sort | \
+  uniq -c | \
+  sort -nr
+```
+
+`grep -Eo "^(feat|fix|docs|chore|style|refactor|test)"`：只提取符合条件的类别标签。
+`sort -nr`：按降序排序，最频繁的类别会排在前面
+
 
 上述，是在开发中遇到的会用到一些命令，`Git`是一个强大的版本控制工具，命令很多，也有很复杂的，需要多积累，此篇文章会持续更新。如有不足，多加指点～～
