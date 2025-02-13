@@ -1,0 +1,14 @@
+server:
+  port: 8005
+
+spring:
+  application:
+    name: Alibaba-Sentinel
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 192.168.3.222:8848
+    sentinel:
+      transport:
+        port: 8719
+        dashboard: 127.0.0.1:8080
