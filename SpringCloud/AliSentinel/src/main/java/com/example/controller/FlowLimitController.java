@@ -1,5 +1,6 @@
 package com.example.controller;
 
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -58,6 +59,13 @@ public class FlowLimitController {
     @PostMapping("/update")
     public String update(){
         return "update...";
+    }
+
+
+    @SentinelResource("hot")
+    @GetMapping("/{id}")
+    public String paramsLimit(@PathVariable Integer id){
+        return id + "query...";
     }
 
 }
