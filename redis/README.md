@@ -11,10 +11,11 @@
    - [混合模式](#rdb--aof-混合持久化)
 5. [Redis-过期策略](#redis-过期策略)
 6. [Redis-内存淘汰](#redis-内存淘汰)
-7. [Redis-哨兵](#redis-哨兵)
-8. [Redis-集群](#redis-集群)
-9. [Redis-性能测试](#redis-性能测试)
-10. [Redis-常见问题](#redis-常见问题)
+7. [主从同步](#主从同步)
+8. [Redis-哨兵](#redis-哨兵)
+9. [Redis-集群](#redis-集群)
+10. [Redis-性能测试](#redis-性能测试)
+11. [Redis-常见问题](#redis-常见问题)
 
 ## 系统环境
 - 系统：macOS
