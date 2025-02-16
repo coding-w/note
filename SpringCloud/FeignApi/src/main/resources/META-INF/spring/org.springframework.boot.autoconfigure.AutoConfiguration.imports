@@ -1,1 +1,1 @@
-com.example.feign.factory.RemoteProduce
+com.example.feign.factory.RemoteProduceFallbackFactory

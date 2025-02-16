@@ -12,3 +12,19 @@ spring:
       transport:
         port: 8719
         dashboard: 127.0.0.1:8080
+      datasource:
+        flow:
+          nacos:
+            server-addr: 192.168.3.222:8848
+            data-id: sentinel-flow-rules.json
+            group-id: DEFAULT_GROUP
+            data-type: json
+            rule-type: flow
+
+feign:
+  httpclient:
+    enabled: true
+    max-connections: 200 # 最大连接数
+    max-connections-per-route: 50 # 单个路径最大连接数
+  sentinel:
+    enabled: true

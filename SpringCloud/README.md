@@ -176,7 +176,7 @@ public class LoadBalancerConfig {
 | 系统自适应保护 | 支持                | 不支持            |
 | 控制台     | 开箱即用，可配置规则，查看秒级监控 | 不完善            |
 
-### Sentinel Dashboard
+### Sentinel Dashboard 流量控制
 
 [下载地址](https://github.com/alibaba/Sentinel/releases)，启动命令如下
 ```shell
@@ -203,4 +203,124 @@ java -Dserver.port=8080 -Dcsp.sentinel.dashboard.server=localhost:8080 -Dproject
 
 通过`@SentinelResource("hot")`设置热点资源名，然后对热点资源的请求参数进行限流配置
 
+### 线程隔离和熔断降级
 
+线程隔离是指在对其他服务调用是，对调用的线程进行隔离，限制线程数  
+
+熔断降级，在调用服务时统计故障比率，到达阈值后直接失败
+
+线程隔离和熔断降级都是对**调用者的保护**
+
+
+#### 线程隔离
+
+线程隔离分为两类：
+1. 线程池隔离，对每一个服务分配固定的线程数量  
+   - 优点：支持主动超时，支持异步调用
+   - 缺点：线程的额外开销比较大
+   - 场景：低扇出
+2. 信号量隔离，分配总信号量，限制最终的线程数数量。
+   - 优点：轻量级，无额外开销
+   - 缺点：不支持主动超时，不支持异步调用
+   - 场景：高频调用，高扇出
+
+线程隔离截图
+
+### 熔断降级
+主要思路是由**断路器**统计服务调用的异常比例、慢请求比例，如果超出阈值则会熔断该服务。即拦截访问该服务的一切请求；而当服务恢复时，断路器会放行访问该服务的请求。
+
+断路器是根据状态机实现的，三种状态
+1. Closed 断路器关闭，放开请求
+2. Open 断路器打开，拒绝请求
+3. Half-Open 尝试放行，统计成功数  
+![](../images/springcloud/image-20221212004219997.png)
+
+#### 熔断策略
+
+三种策略：慢调用、异常比例、异常数
+
+##### 慢调用
+
+业务的响应时长 Response Time（RT）大于指定时长的请求认定为慢调用请求。在指定时间内，如果请求数量超过设定的最小数量，慢调用比例大于设定的阈值，则触发熔断
+
+![](../images/springcloud/images-2025-02-16-14-34-14.png)
+
+解读：RT超过500ms的调用是慢调用，统计最近10000ms内的请求，如果请求量超过10次，并且慢调用比例不低于0.5，则触发熔断，熔断时长为5秒。然后进入half-open状态，放行一次请求做测试
+
+#### 异常比例
+
+异常比例或异常数：统计指定时间内的调用，如果调用次数超过指定请求数，并且出现异常的比例达到设定的比例阈值（或超过指定异常数），则触发熔断
+
+### 授权规则
+授权规则可以对调用方的来源做控制，有白名单和黑名单两种方式  
+
+1. 白名单：来源（origin）在白名单内的调用者允许访问
+2. 黑名单：来源（origin）在黑名单内的调用者不允许访问
+
+截图
+
+```java
+@Component
+public class HeaderOriginParser implements RequestOriginParser {
+
+   /**
+    * 返回应用名称
+    * @return 应用名称
+    */
+   @Override
+   public String parseOrigin(HttpServletRequest httpServletRequest) {
+      String origin = httpServletRequest.getHeader("origin");
+      if (StringUtils.isEmpty(origin)) {
+         origin = "blank";
+      }
+      return origin;
+   }
+}
+```
+
+自定义异常结果，见[SentinelBlockHandler.java](./AliSentinel/src/main/java/com/example/sentinel/SentinelBlockHandler.java)
+
+
+### 规则持久化
+
+#### 规则管理模式
+
+1. 原始模式，API将规则推送至客户端并直接更新到内存中，扩展写数据源(WritableDataSource)，默认这种  
+   - 优点：简单，无依赖
+   - 缺点：不保证一致性；规则保存在内存中，重启即消失
+2. Pull模式，扩展数据源(WritableDataSource)，客户端主动向某个规则管理中心定期轮训拉取规则，这个规则中心可以是RDBMS、文件等
+   - 优点：简单，无任何依赖，规则持久化
+   - 缺点：不保证一致性；实时行不保证，拉取过于频繁也可能会有性能问题
+3. Push模式，规则中心统一推送，客户端通过注册监听器的方式时刻监听变化，比如使用Nacos、Zookeeper等配置中心。**生产环境一般采用push模式的数据源**
+   - 优点：规则持久化，一致性
+   - 缺点：引入第三方依赖
+
+#### Push模式 持久化
+
+##### 修改应用服务
+1. 添加依赖
+
+   ```xml
+   <dependency>
+       <groupId>com.alibaba.csp</groupId>
+       <artifactId>sentinel-datasource-nacos</artifactId>
+   </dependency>
+   ```
+
+2. 配置nacos地址
+
+   ```yaml
+   spring:
+     cloud:
+       sentinel:
+         datasource:
+           flow:
+             nacos:
+               server-addr: localhost:8848 # nacos地址
+               dataId: sentinel-flow-rules
+               groupId: SENTINEL_GROUP
+               rule-type: flow # 还可以是：degrade、authority、param-flow
+   ```
+
+##### 修改Sentinel Dashboard
+todo

@@ -1,6 +1,10 @@
 package com.example.controller;
 
 import com.alibaba.csp.sentinel.annotation.SentinelResource;
+import com.example.feign.clients.RemoteProduceClient;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.client.ServiceInstance;
+import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpServletRequest;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.util.List;
 
 /**
  * @author wangxiang
@@ -19,14 +24,32 @@ import java.io.IOException;
 @RestController
 public class FlowLimitController {
 
+    @Autowired
+    private RemoteProduceClient remoteProduceClient;
+    @Autowired
+    private DiscoveryClient discoveryClient;
+
+    @GetMapping("aaa")
+    public void testServiceDiscovery() {
+        List<ServiceInstance> instances = discoveryClient.getInstances("producer-application");
+        if (instances.isEmpty()) {
+            System.out.println("No instances found for producer-application");
+        } else {
+            for (ServiceInstance instance : instances) {
+                System.out.println("Instance: " + instance.getUri());
+            }
+        }
+    }
+
+
     @GetMapping("/testA")
-    public String testA(){
+    public String testA() {
         return "testA...";
     }
 
 
     @RequestMapping("/testB/**")
-    public String testB(HttpServletRequest request){
+    public String testB(HttpServletRequest request) {
         System.out.println("params = " + request.getRequestURI());
         System.out.println("method = " + request.getMethod());
         System.out.println("query = " + request.getQueryString());
@@ -52,20 +75,22 @@ public class FlowLimitController {
 
 
     @GetMapping("/query")
-    public String query(){
+    public String query() {
         return "query...";
     }
 
     @PostMapping("/update")
-    public String update(){
+    public String update() {
         return "update...";
     }
 
 
     @SentinelResource("hot")
     @GetMapping("/{id}")
-    public String paramsLimit(@PathVariable Integer id){
-        return id + "query...";
+    public String paramsLimit(@PathVariable Integer id) {
+        System.out.println("id = " + id);
+        return remoteProduceClient.get();
+        // return "Asd";
     }
 
 }

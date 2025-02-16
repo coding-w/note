@@ -32,6 +32,12 @@ spring:
             - Path=/produce/**    # 路径断言，判断路径是否是以/user 开头，如果是则符合，转发至此
           filters:
             - StripPrefix=1
+        - id: Alibaba-Sentinel
+          uri: lb://Alibaba-Sentinel
+          predicates:
+            - Path=/sentinel/**
+          filters:
+            - StripPrefix=1
         - id: consumer-application
           uri: lb://consumer-application
           predicates:  ## 断言工厂   https://docs.spring.io/spring-cloud-gateway/docs/4.0.6/reference/html/#gateway-request-predicates-factories
@@ -41,3 +47,4 @@ spring:
             - StripPrefix=1
       default-filters:
         - AddRequestHeader=X-Request-red, blue  #全局默认过滤器
+        - AddRequestHeader=origin,gateway  # 授权规则
