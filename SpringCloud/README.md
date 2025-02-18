@@ -178,7 +178,7 @@ public class LoadBalancerConfig {
 
 ### Sentinel Dashboard 流量控制
 
-[下载地址](https://github.com/alibaba/Sentinel/releases)，启动命令如下
+[下载地址](https://github.com/alibaba/Sentinel/releases)，[本地](./z_jar/sentinel-dashboard-1.8.8.jar)，启动命令如下
 ```shell
 java -Dserver.port=8080 -Dcsp.sentinel.dashboard.server=localhost:8080 -Dproject.name=sentinel-dashboard -jar sentinel-dashboard.jar
 ```
@@ -324,3 +324,19 @@ public class HeaderOriginParser implements RequestOriginParser {
 
 ##### 修改Sentinel Dashboard
 todo
+
+### 常见问题
+
+#### Sentinel 实现流控、熔断降级的主要原理
+
+Sentinel 实现流控、熔断降级核心原理主要依赖**资源隔离**、**规则引擎**和**插槽链**等机制。
+
+资源隔离：在Sentinel中每一个可控的API被视为一个资源，可以对资源进行流量控制、熔断降级等配置
+
+插槽链机制：每个请求会经过一个插槽链（Slot Chain），插槽链由一系列的插槽（每个插槽处理特定的功能，如流控、熔断、降级等）按顺序执行
+
+规则引擎：过 Sentinel 控制台，可以动态配置流量控制、熔断、降级等规则，这些规则会实时加载到系统中，实时生效
+
+流量控制策略：使用**令牌桶算法**、**漏桶算法**对请求进行控制，防止系统在流量过大的情况下发生崩溃或性能下降
+
+熔断机制：当服务调用的失败率或响应时间超过阈值时，Sentinel 会触发熔断机制，暂停对该服务的请求，避免服务雪崩，系统保持稳定

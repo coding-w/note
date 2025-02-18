@@ -13,12 +13,12 @@
 8. [RPC](./rpc/README.md)
 9. [WebSocket](./websocket/README.md)
 10. [Redis](./redis/README.md)
+11. [Git](./git-note/README.md)
+12. [Java](./java/README.md)
+13. [SpringCloud](./SpringCloud/README.md)
 
 
 
-技术能力**瓶颈**？
-感觉工作没有什么技术含量？
-感到迷茫和彷徨？
 
 技术太多学不过来？
 要学的技术多得都不行了，完全不知道怎么学？
