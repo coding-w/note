@@ -74,6 +74,7 @@ String 是最基本的 key-value 结构，key 是唯一标识，value 是具体�
 ```shell
 # 设置一个键值对，以及过期时间
 set key value [NX|XX] [GET] [EX seconds|PX millise
+mset key1 value1 key2 value2 key3 value3
 # 获取 key 对用 value
 get key
 ```  
