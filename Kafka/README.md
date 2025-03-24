@@ -156,7 +156,7 @@ Topic是逻辑上的概念，而partition是物理上的概念，每一个partit
 
 Kafka存储日志的索引使用的是稀疏索引，大约每往log文件写入4kb数据，会往index文件写入一条索引
 
-Kafka集群日志，默认7天后被清除，清楚策略有两种：删除、压缩策略
+Kafka集群日志，默认7天后被清除，清除策略有两种：删除、压缩策略
 
 - delete 删除日志，`log.cleanup.policy=delete`，基于时间或者基于大小
 - compact 日志压缩，对于相同key的不同的value值，保留最后一个版本
@@ -297,6 +297,13 @@ kafka-console-consumer.sh --bootstrap.server kafka1:9093 --topic _consumer_offse
 
 
 ## 常见问题
+
+### Kafka高效读写数据
+
+1. Kafka本身是分布式集群，可以采用分区技术，并行度高
+2. 读数据采用稀疏索引，可以快速定位要消费的数据
+3. 顺序写磁盘，Kafka的producer生产数据，要写入到log文件中，写的过程是一只追加到文件末端，为顺序写
+4. 零拷贝和页缓存(操作系统缓存)
 
 ### 如何保证消息队列的高可用？
 
