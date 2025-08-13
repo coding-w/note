@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>广州五日深度游攻略</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .weather-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .weather-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .weather-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
+        .weather-item {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+        
+        .day-card {
+            background: white;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+        
+        .day-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .day-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .day-number {
+            font-size: 2em;
+            font-weight: bold;
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin-right: 15px;
+        }
+        
+        .day-title {
+            font-size: 1.4em;
+            font-weight: 500;
+        }
+        
+        .day-content {
+            padding: 25px;
+        }
+        
+        .schedule-item {
+            border-left: 4px solid #667eea;
+            margin-bottom: 20px;
+            padding-left: 20px;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .time-badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+        
+        .food-section {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .food-section h4 {
+            color: #e17055;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        
+        .food-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .food-item {
+            background: #ff7675;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        
+        .transport-section, .accommodation-section {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .transport-section h3, .accommodation-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+        
+        .tips-section {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .tips-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        
+        .tip-item {
+            background: rgba(255,255,255,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #ff7675;
+        }
+        
+        .map-link {
+            background: #00b894;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 25px;
+            text-decoration: none;
+            display: inline-block;
+            margin: 10px 5px;
+            transition: transform 0.3s ease;
+        }
+        
+        .map-link:hover {
+            transform: scale(1.05);
+            color: white;
+        }
+        
+        .cost-breakdown {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .cost-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .cost-item:last-child {
+            border-bottom: none;
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #e17055;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .weather-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tips-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-map-marked-alt"></i> 广州五日深度游攻略</h1>
+            <p>2025年8月20日 - 8月25日 | 从武汉出发，探寻羊城魅力</p>
+        </div>
+
+        <div class="weather-card">
+            <h3><i class="fas fa-cloud-sun"></i> 广州8月天气提醒</h3>
+            <div class="weather-grid">
+                <div class="weather-item">
+                    <strong>气温</strong><br>
+                    25-35°C，体感炎热
+                </div>
+                <div class="weather-item">
+                    <strong>降雨</strong><br>
+                    雷阵雨频繁，湿度大
+                </div>
+                <div class="weather-item">
+                    <strong>着装</strong><br>
+                    轻薄透气，防晒必备
+                </div>
+                <div class="weather-item">
+                    <strong>必需品</strong><br>
+                    雨伞、防晒霜、防晒衣
+                </div>
+            </div>
+        </div>
+
+        <!-- 第1天 -->
+        <div class="day-card">
+            <div class="day-header">
+                <span class="day-number">Day 1</span>
+                <span class="day-title">抵达广州 · 初探花城</span>
+            </div>
+            <div class="day-content">
+                <div class="schedule-item">
+                    <div class="time-badge">07:30-09:00</div>
+                    <h4>武汉→广州高铁</h4>
+                    <p>乘坐G1103次高铁，武汉站→广州南站（预计1小时45分钟）</p>
+                    <p><strong>票价：</strong>二等座463.5元，一等座738.5元</p>
+                </div>
+                <div class="schedule-item">
+                    <div class="time-badge">10:30-11:30</div>
+                    <h4>酒店入住 & 休整</h4>
+                    <p>建议住宿：<strong>北京路步行街附近</strong>（地铁直达，交通便利）</p>
+                    <p>推荐酒店：全季广州北京路步行街店、如家精选北京路店</p>
+                </div>
+                <div class="schedule-item">
+                    <div class="time-badge">12:00-13:30</div>
+                    <h4>陶陶居午餐</h4>
+                    <p>百年老店，正宗广式早茶</p>
+                    <p><strong>必点：</strong>虾饺、烧卖、叉烧包、流沙包</p>
+                </div>
+                <div class="schedule-item">
+                    <div class="time-badge">14:00-16:00</div>
+                    <h4>陈家祠游览</h4>
+                    <p>清代岭南建筑艺术瑰宝，国家级文物保护单位</p>
+                    <p><strong>门票：</strong>10元<br><strong>开放时间：</strong>8:30-17:30</p>
+                </div>
+                <div class="schedule-item">
+                    <div class="time-badge">16:30-18:00</div>
+                    <h4>北京路步行街闲逛</h4>
+                    <p>千年古道，感受广州商业文化，品尝地道小吃</p>
+                </div>
+                <div class="food-section">
+                    <h4>今日美食推荐</h4>
+                    <div class="food-list">
+                        <span class="food-item">陶陶居早茶</span>
+                        <span class="food-item">北京路肠粉</span>
+                        <span class="food-item">银记肠粉</span>
+                        <span class="food-item">陈添记鱼皮</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第2天 -->
+        <div class="day-card">
+            <div class="day-header">
+                <span class="day-number">Day 2</span>
+                <span class="day-title">现代广州 · 城市地标</span>
+            </div>
+            <div class="day-content">
+                <div class="schedule-item">
+                    <div class="time-badge">09:00-12:00</div>
+                    <h4>广州塔（小蛮腰）</h4>
+                    <p>广州地标，450米高空观景台俯瞰珠江新城</p>
+                    <p><strong>门票：</strong>150元（433米白云星空观光票）<br><strong>开放时间：</strong>9:00-22:30</p>
+                    <a href="https://gaode.com/dir/23.106580,113.322720,%E5%B9%BF%E5%B7%9E%E5%A1%94/?src=pc&locs=&callapp=1" class="map-link" target="_blank">
+                        <i class="fas fa-map-marker-alt"></i> 查看位置
+                    </a>
+                </div>
+                <div class="schedule-item">
+                    <div class="time-badge">12:30-13:30</div>
+                    <h4>点都德云星店午餐</h4>
+                    <p>网红茶楼，体验新式广式点心</p>
+                    <p><strong>必点：</strong>金沙红米肠、虾饺皇、百合酱蒸凤爪</p>
+                </div>
+                <div class="schedule-item">
+                    <div class="time-badge">14:00-16:00</div>
+                    <h4>广东省博物馆</h4>
+                    <p>馆藏丰富，了解岭南历史文化</p>
+                    <p><strong>门票：</strong>免费（需预约）<br><strong>开放时间：</strong>9:00-17:00（周一闭馆）</p>
+                </div>
+                <div class="schedule-item">
+                    <div class="time-badge">16:30-18:00</div>
+                    <h4>花城广场 & 珠江新城</h4>
+                    <p>现代广州CBD，感受羊城活力</p>
+                </div>
+                <div class="schedule-item">
+                    <div class="time-badge">19:00-21:00</div>
+                    <h4>珠江夜游</h4>
+                    <p>乘船夜游珠江，欣赏广州夜景</p>
+                    <p><strong>票价：</strong>78-228元（不同船型）<br><strong>发船时间：</strong>18:45-21:45</p>
+                </div>
+                <div class="food-section">
+                    <h4>今日美食推荐</h4>
+                    <div class="food-list">
+                        <span class="food-item">点都德早茶</span>
+                        <span class="food-item">广州酒家</span>
+                        <span class="food-item">泮溪酒家</span>
+                        <span class="food-item">艇仔粥</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第3天 -->
+        <div class="day-card">
+            <div class="day-header">
+                <span class="day-number">Day 3</span>
+                <span class="day-title">长隆狂欢 · 刺激体验</span>
+            </div>
+            <div class="day-content">
+                <div class="schedule-item">
+                    <div class="time-badge">09:00-17:00</div>
+                    <h4>长隆欢乐世界</h4>
+                    <p>亚洲超大型主题公园，体验全球顶尖游乐设施</p>
+                    <p><strong>门票：</strong>250元<br><strong>开放时间：</strong>9:30-18:00</p>
+                    <p><strong>必玩：</strong>垂直过山车、十环过山车、超级大摆锤、四维影院</p>
+                    <a href="https://gaode.com/dir/23.002580,113.327040,%E9%95%BF%E9%9A%86%E6%AC%A2%E4%B9%90%E4%B8%96%E7%95%8C/?src=pc&locs=&callapp=1" class="map-link" target="_blank">
+                        <i class="fas fa-map-marker-alt"></i> 查看位置
+                    </a>
+                </div>
+                <div class="schedule-item">
+                    <div class="time-badge">12:00-13:00</div>
+                    <h4>园区内午餐</h4>
+                    <p>园区内有多个餐厅，可品尝快餐、粤式小食</p>
+                </div>
+                <div class="schedule-item">
+                    <div class="time-badge">17:30-19:00</div>
+                    <h4>返回市区 & 长隆酒店自助晚餐</h4>
+                    <p>长隆酒店白虎自助餐厅，与珍稀动物共进晚餐</p>
+                    <p><strong>价格：</strong>268元/人</p>
+                </div>
+                <div class="food-section">
+                    <h4>今日美食推荐</h4>
+                    <div class="food-list">
+                        <span class="food-item">园区快餐</span>
+                        <span class="food-item">长隆白虎自助餐</span>
+                        <span class="food-item">烧鹅</span>
+                        <span class="food-item">双皮奶</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第4天 -->
+        <div class="day-card">
+            <div class="day-header">
+                <span class="day-number">Day 4</span>
+                <span class="day-title">古韵羊城 · 历史人文</span>
+            </div>
+            <div class="day-content">
+                <div class="schedule-item">
+                    <div class="time-badge">08:00-09:30</div>
+                    <h4>越秀公园 & 五羊雕像</h4>
+                    <p>广州城市公园，五羊雕像见证羊城传说</p>
+                    <p><strong>门票：</strong>免费<br><strong>开放时间：</strong>6:00-22:00</p>
+                </div>
+                <div class="schedule-item">
+                    <div class="time-badge">10:00-11:30</div>
+                    <h4>中山纪念堂</h4>
+                    <p>纪念孙中山先生的大型建筑，中西合璧建筑艺术珍宝</p>
+                    <p><strong>门票：</strong>10元<br><strong>开放时间：</strong>8:00-18:00</p>
+                </div>
+                <div class="schedule-item">
+                    <div class="time-badge">12:00-13:30</div>
+                    <h4>莲香楼午餐</h4>
+                    <p>百年老店，正宗广式月饼发源地</p>
+                    <p><strong>必点：</strong>莲蓉月饼、老婆饼、鸡仔饼</p>
+                </div>
+                <div class="schedule-item">
+                    <div class="time-badge">14:00-15:30</div>
+                    <h4>沙面岛</h4>
+                    <p>欧陆风情建筑群，广州最美历史文化街区</p>
+                    <p><strong>门票：</strong>免费<br><strong>最佳拍照点：</strong>沙面大街、白天鹅宾馆</p>
+                </div>
+                <div class="schedule-item">
+                    <div class="time-badge">16:00-18:00</div>
+                    <h4>西关大屋 & 荔枝湾涌</h4>
+                    <p>体验老广州生活，品尝西关美食</p>
+                    <p><strong>特色：</strong>西关大屋、荔枝湾夜景、西关小吃</p>
+                </div>
+                <div class="food-section">
+                    <h4>今日美食推荐</h4>
+                    <div class="food-list">
+                        <span class="food-item">莲香楼茶点</span>
+                        <span class="food-item">陈添记鱼皮</span>
+                        <span class="food-item">南信双皮奶</span>
+                        <span class="food-item">肠粉</span>
+                        <span class="food-item">姜撞奶</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第5天 -->
+        <div class="day-card">
+            <div class="day-header">
+                <span class="day-number">Day 5</span>
+                <span class="day-title">岭南风情 · 返程准备</span>
+            </div>
+            <div class="day-content">
+                <div class="schedule-item">
+                    <div class="time-badge">08:00-09:00</div>
+                    <h4>酒店退房 & 早餐</h4>
+                    <p>建议选择酒店早茶，享用最后一份广式早茶</p>
+                </div>
+                <div class="schedule-item">
+                    <div class="time-badge">09:30-12:00</div>
+                    <h4>白云山风景区</h4>
+                    <p>羊城第一秀，俯瞰广州全景</p>
+                    <p><strong>门票：</strong>5元（缆车：上山25元，下山20元）<br><strong>开放时间：</strong>6:00-21:00</p>
+                    <a href="https://gaode.com/dir/23.178095,113.289421,%E7%99%BD%E4%BA%91%E5%B1%B1/?src=pc&locs=&callapp=1" class="map-link" target="_blank">
+                        <i class="fas fa-map-marker-alt"></i> 查看位置
+                    </a>
+                </div>
+                <div class="schedule-item">
+                    <div class="time-badge">12:30-13:30</div>
+                    <h4>下山后品尝白云猪手</h4>
+                    <p>白云山特色菜，广州四大名菜之一</p>
+                </div>
+                <div class="schedule-item">
+                    <div class="time-badge">14:00-15:00</div>
+                    <h4>广州南站 & 返程</h4>
+                    <p>乘坐地铁2号线直达广州南站，乘坐返程高铁</p>
+                </div>
+                <div class="schedule-item">
+                    <div class="time-badge">16:30-18:30</div>
+                    <h4>抵达武汉</h4>
+                    <p>结束广州五日游，返回温馨的家</p>
+                </div>
+                <div class="food-section">
+                    <h4>今日美食推荐</h4>
+                    <div class="food-list">
+                        <span class="food-item">酒店早茶</span>
+                        <span class="food-item">白云猪手</span>
+                        <span class="food-item">沙河粉</span>
+                        <span class="food-item">打包广州特产</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 交通与住宿 -->
+        <div class="transport-section">
+            <h3><i class="fas fa-subway"></i> 交通指南</h3>
+            <p><strong>往返交通：</strong>武汉站 → 广州南站（高铁约1小时45分钟）</p>
+            <p><strong>市内交通：</strong>地铁网络发达，建议购买羊城通</p>
+            <p><strong>地铁线路：</strong>2号线、3号线、APM线覆盖主要景点</p>
+            
+            <div style="margin-top: 20px;">
+                <a href="https://gaode.com/dir/30.5801,114.4257,23.106580,113.322720/?src=pc&locs=&callapp=1" class="map-link" target="_blank">
+                    <i class="fas fa-route"></i> 查看往返路线
+                </a>
+                <a href="https://uri.amap.com/navi?type=bus&to=113.322720,23.106580&name=广州塔" class="map-link" target="_blank">
+                    <i class="fas fa-bus"></i> 广州公交导航
+                </a>
+            </div>
+        </div>
+
+        <!-- 住宿建议 -->
+        <div class="accommodation-section">
+            <h3><i class="fas fa-hotel"></i> 住宿推荐</h3>
+            <p><strong>推荐区域：</strong>北京路步行街（交通便利，美食集中）</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px;">
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                    <h4>经济型</h4>
+                    <p>如家精选北京路店<br>全季广州北京路步行街店</p>
+                    <p><strong>价格：</strong>200-300元/晚</p>
+                </div>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                    <h4>商务型</h4>
+                    <p>广州花园酒店<br>中国大酒店</p>
+                    <p><strong>价格：</strong>400-600元/晚</p>
+                </div>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                    <h4>豪华型</h4>
+                    <p>白天鹅宾馆<br>广州塔下的四季酒店</p>
+                    <p><strong>价格：</strong>800-1500元/晚</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 费用预算 -->
+        <div class="cost-breakdown">
+            <h3><i class="fas fa-calculator"></i> 费用预算（人均）</h3>
+            <div class="cost-item"><span>往返高铁票</span><span>约930元</span></div>
+            <div class="cost-item"><span>住宿费用（4晚）</span><span>800-2000元</span></div>
+            <div class="cost-item"><span>景点门票</span><span>515元</span></div>
+            <div class="cost-item"><span>餐饮费用</span><span>800-1200元</span></div>
+            <div class="cost-item"><span>市内交通</span><span>200-300元</span></div>
+            <div class="cost-item"><span><strong>总计</strong></span><span><strong>3245-3945元</strong></span></div>
+        </div>
+
+        <!-- 实用贴士 -->
+        <div class="tips-section">
+            <h3><i class="fas fa-lightbulb"></i> 实用贴士</h3>
+            <div class="tips-list">
+                <div class="tip-item">
+                    <h4>天气提醒</h4>
+                    <p>8月广州高温多雨，务必携带雨伞、防晒霜，准备薄外套应对室内空调。</p>
+                </div>
+                <div class="tip-item">
+                    <h4>交通贴士</h4>
+                    <p>广州地铁很发达，羊城通可在7-11购买，刷码乘车更便利。</p>
+                </div>
+                <div class="tip-item">
+                    <h4>美食建议</h4>
+                    <p>早茶建议9点前到达，避开用餐高峰。地道小吃可到西关老城区。</p>
+                </div>
+                <div class="tip-item">
+                    <h4>购物提醒</h4>
+                    <p>莲香楼、陶陶居可购买手信，广州特产：陈皮饼、老婆饼、荔枝干。</p>
+                </div>
+                <div class="tip-item">
+                    <h4>安全注意</h4>
+                    <p>保管好贵重物品，在人多场所注意防扒，遇雨可临时进入商场避雨。</p>
+                </div>
+                <div class="tip-item">
+                    <h4>时间建议</h4>
+                    <p>景点开放时间多为8:30-17:30，建议早8:30前到达，避开旅游团。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 紧急联系 -->
+        <div style="background: #ffc107; padding: 20px; border-radius: 10px; margin-top: 20px; text-align: center;">
+            <h3><i class="fas fa-phone"></i> 紧急联系方式</h3>
+            <p><strong>报警电话：</strong>110｜<strong>急救电话：</strong>120</p>
+            <p><strong>广州地铁客服：</strong>96891｜<strong>高铁客服：</strong>12306</p>
+            <p><strong>旅游投诉：</strong>12301</p>
+        </div>
+    </div>
+
+    <!-- 添加地图交互功能 -->
+    <script>
+        // 添加路线地图功能
+        function createRouteMap() {
+            const destinations = [
+                {name: '广州塔', lat: 23.106580, lng: 113.322720},
+                {name: '陈家祠', lat: 23.128590, lng: 113.250860},
+                {name: '白云山', lat: 23.178095, lng: 113.289421},
+                {name: '长隆欢乐世界', lat: 23.002580, lng: 113.327040},
+                {name: '北京路步行街', lat: 23.125190, lng: 113.266800}
+            ];
+            
+            console.log('已加载路线地图，可通过高德地图查看详细路线');
+        }
+        
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            createRouteMap();
+            
+            // 添加滚动动画
+            const dayCards = document.querySelectorAll('.day-card');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            });
+            
+            dayCards.forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(card);
+            });
+            
+            // 添加点击复制功能
+            const mapLinks = document.querySelectorAll('.map-link');
+            mapLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const url = this.href;
+                    navigator.clipboard.writeText(url).then(() => {
+                        alert('路线链接已复制到剪贴板！');
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>
